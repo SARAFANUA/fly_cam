@@ -1,21 +1,15 @@
 // js/ui/cameraModal.js
 import * as cameraRenderer from '../map/cameraRenderer.js';
-import { initCameraFilters } from './cameraFilters.js'; // <-- ІМПОРТ
+import { initCameraFilters } from './cameraFilters.js';
 
 let mapInstance = null;
 let camerasVisible = true;
 let cameraClusteringEnabled = true;
 let lastFilters = {};
 
-// Глобальна функція для main.js
-window.__setCameraFiltersForModal = (filters = {}) => {
-  lastFilters = { ...(filters || {}) };
-};
-
 function qs(id) { return document.getElementById(id); }
 
 function buildCameraPanelHtml() {
-  // Цей HTML залишається без змін, він правильний
   return `
     <section class="panel" id="camera-filters-panel">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
@@ -45,55 +39,26 @@ function buildCameraPanelHtml() {
       </label>
 
       <div class="grid-2">
-        <label class="field">
-          <span>Область</span>
-          <select id="filter-oblast"></select>
-        </label>
-        <label class="field">
-          <span>Район</span>
-          <select id="filter-raion"></select>
-        </label>
+        <label class="field"><span>Область</span><select id="filter-oblast"></select></label>
+        <label class="field"><span>Район</span><select id="filter-raion"></select></label>
       </div>
-
-      <label class="field">
-        <span>Громада</span>
-        <select id="filter-hromada"></select>
-      </label>
-
-      <label class="field">
-        <span>Функціонал / тип ліцензії</span>
-        <select id="filter-license-type"></select>
-      </label>
-
-      <label class="field">
-        <span>Об'єкт аналітики</span>
-        <select id="filter-analytics-object"></select>
-      </label>
-
+      <label class="field"><span>Громада</span><select id="filter-hromada"></select></label>
+      <label class="field"><span>Функціонал / тип ліцензії</span><select id="filter-license-type"></select></label>
+      <label class="field"><span>Об'єкт аналітики</span><select id="filter-analytics-object"></select></label>
       <div class="grid-2">
-        <label class="field">
-          <span>Стан</span>
-          <select id="filter-camera-status"></select>
-        </label>
-        <label class="field">
-          <span>КА доступ</span>
-          <select id="filter-ka-access"></select>
-        </label>
+        <label class="field"><span>Стан</span><select id="filter-camera-status"></select></label>
+        <label class="field"><span>КА доступ</span><select id="filter-ka-access"></select></label>
       </div>
-
-      <label class="field">
-        <span>Інтегрована система</span>
-        <select id="filter-system"></select>
-      </label>
+      <label class="field"><span>Інтегрована система</span><select id="filter-system"></select></label>
 
       <button id="filter-reset-btn" class="btn-secondary" type="button" style="background: var(--danger-color);">Скинути фільтри</button>
-
       <div id="camera-panel-hint" style="margin-top:10px; opacity:.8; font-size:.9em;"></div>
     </section>
   `;
 }
 
-async function applyVisibilityAndClusterState() {
+// Функція для оновлення даних через сервер (фільтри)
+async function reloadWithCurrentSettings() {
   if (mapInstance) cameraRenderer.setMapInstance(mapInstance);
   cameraRenderer.setVisibility(camerasVisible);
 
@@ -101,15 +66,24 @@ async function applyVisibilityAndClusterState() {
     cameraRenderer.clearAllCameras();
     return;
   }
-  
-  // Оновлюємо налаштування кластеризації
-  const st = cameraRenderer.getState();
-  if (st.isClusteringEnabled !== cameraClusteringEnabled) {
-     // У наступному reloadCameras це врахується
-  }
 
-  // Викликаємо оновлення через main.js
-  await window.reloadCameras?.(lastFilters);
+  // Передаємо lastFilters і явний стан кластеризації
+  await window.reloadCameras?.(lastFilters, cameraClusteringEnabled);
+}
+
+// Функція для миттєвого оновлення візуалу (без запиту на сервер)
+function updateVisualsOnly() {
+    if (mapInstance) cameraRenderer.setMapInstance(mapInstance);
+    cameraRenderer.setVisibility(camerasVisible);
+    
+    if (!camerasVisible) {
+        cameraRenderer.clearAllCameras();
+        return;
+    }
+
+    // Беремо вже завантажені камери з renderer і просто перемальовуємо
+    const { cameras } = cameraRenderer.getState();
+    cameraRenderer.renderCameras(cameras, cameraClusteringEnabled);
 }
 
 function openCameraModal() {
@@ -117,43 +91,31 @@ function openCameraModal() {
   if (!container) return;
 
   const body = qs('camera-modal-body');
-  // Рендеримо HTML, якщо панелі ще немає
-  if (body) {
+  if (body && !qs('camera-filters-panel')) {
     body.innerHTML = buildCameraPanelHtml();
   }
 
-  const hint = qs('camera-panel-hint');
-  if (hint) {
-    hint.textContent = 'Порада: фільтри звужують запит до БД, перемикачі керують відображенням.';
-  }
-
+  // Показуємо модалку
   container.classList.remove('hidden');
-
   const overlay = qs('camera-modal-overlay');
-  const overlayToggle = qs('camera-toggle-overlay-btn');
-  if (overlay && overlayToggle) {
-    overlayToggle.checked = false;
-    overlay.classList.remove('hidden');
-  }
+  if (overlay) overlay.classList.remove('hidden');
 
-  // Відновлюємо стан перемикачів
+  // Синхронізуємо стан UI
   const vis = qs('toggle-cameras-visibility-btn');
   if (vis) vis.checked = camerasVisible;
-
   const cl = qs('toggle-camera-clustering-btn');
   if (cl) cl.checked = cameraClusteringEnabled;
 
-  // --- ГОЛОВНА ЗМІНА: Ініціалізуємо логіку фільтрів ТУТ ---
-  // Передаємо callback, який викликає window.reloadCameras (з main.js)
+  // Ініціалізуємо логіку фільтрів
   initCameraFilters({ 
       onChange: (filters) => {
           lastFilters = filters;
-          window.reloadCameras?.(filters);
+          reloadWithCurrentSettings(); // Тут потрібен запит на сервер
       }
   });
 
-  // Застосовуємо поточний стан (щоб підтягнути дані)
-  applyVisibilityAndClusterState().catch(console.error);
+  // Перший рендер (якщо відкрили вперше)
+  reloadWithCurrentSettings().catch(console.error);
 }
 
 function closeCameraModal() {
@@ -161,8 +123,8 @@ function closeCameraModal() {
   if (container) container.classList.add('hidden');
 }
 
-// ... (функції makeDraggable та makeResizable залишаються без змін)
-function makeDraggable(element, handle) { /* ... код той самий ... */ 
+// Драг-н-дроп і ресайз (без змін)
+function makeDraggable(element, handle) {
   let offsetX, offsetY;
   const move = (e) => {
     const x = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
@@ -192,7 +154,7 @@ function makeDraggable(element, handle) { /* ... код той самий ... */
   handle.addEventListener('touchstart', startMove, { passive: false });
 }
 
-function makeResizable(element, resizer) { /* ... код той самий ... */ 
+function makeResizable(element, resizer) {
   let startX, startY, startWidth, startHeight;
   const resize = (e) => {
     const x = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
@@ -230,7 +192,6 @@ function wireCameraModalEvents() {
   if (openBtn) openBtn.addEventListener('click', openCameraModal);
   if (closeBtn) closeBtn.addEventListener('click', closeCameraModal);
   if (overlay) overlay.addEventListener('click', closeCameraModal);
-
   if (overlayToggle && overlay) {
     overlayToggle.addEventListener('change', () => {
       overlay.classList.toggle('hidden', overlayToggle.checked);
@@ -244,18 +205,18 @@ function wireCameraModalEvents() {
   if (content && header) makeDraggable(content, header);
   if (content && resizer) makeResizable(content, resizer);
 
-  // Делегування подій для динамічних тумблерів
-  document.addEventListener('change', async (e) => {
+  // Обробка тумблерів
+  document.addEventListener('change', (e) => {
     const id = e.target?.id;
 
     if (id === 'toggle-cameras-visibility-btn') {
       camerasVisible = !!e.target.checked;
-      await applyVisibilityAndClusterState();
+      updateVisualsOnly(); // Тут достатньо локального оновлення
     }
 
     if (id === 'toggle-camera-clustering-btn') {
       cameraClusteringEnabled = !!e.target.checked;
-      await applyVisibilityAndClusterState();
+      updateVisualsOnly(); // Тут ТАКОЖ достатньо локального оновлення (не треба сервер)
     }
   });
 }

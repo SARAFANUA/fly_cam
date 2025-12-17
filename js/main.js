@@ -157,11 +157,23 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     // Камери (інтеграція старого коду)
-    window.reloadCameras = async (filters) => {
+    // Глобальна функція для перезавантаження камер
+    // Додаємо аргумент clusteringOverride
+    window.reloadCameras = async (filters, clusteringOverride = null) => {
         const data = await fetchCameras({ ...filters, limit: 10000 });
         const items = data?.items || [];
-        const { isClusteringEnabled } = cameraRenderer.getState();
-        cameraRenderer.renderCameras(items, isClusteringEnabled);
+        
+        // Якщо передали явне значення кластеризації - беремо його, 
+        // інакше питаємо у рендерера поточний стан
+        let isClustering;
+        if (clusteringOverride !== null && clusteringOverride !== undefined) {
+            isClustering = clusteringOverride;
+        } else {
+            const state = cameraRenderer.getState();
+            isClustering = state.isClusteringEnabled;
+        }
+
+        cameraRenderer.renderCameras(items, isClustering);
     };
     
 

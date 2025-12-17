@@ -1,12 +1,17 @@
 // server/routes/cameras.js
 import express from 'express';
 
+// 1. Додаємо нові поля у білий список
 const ALLOWED_FILTERS = new Set([
   'oblast',
   'raion',
   'hromada',
   'camera_status',
   'integration_status',
+  'license_type',       // <-- Додано
+  'analytics_object',   // <-- Додано
+  'ka_access',          // <-- Додано
+  'system'              // <-- Додано (спеціальна обробка нижче)
 ]);
 
 function parseIntSafe(v, def) {
@@ -24,7 +29,7 @@ export default function camerasRoutes(db) {
     const where = [];
     const params = {};
 
-    // bbox = "south,west,north,east"
+    // bbox
     if (req.query.bbox) {
       const parts = String(req.query.bbox).split(',').map(s => parseFloat(s));
       if (parts.length === 4 && parts.every(Number.isFinite)) {
@@ -38,15 +43,24 @@ export default function camerasRoutes(db) {
       }
     }
 
-    // точні фільтри
+    // Точні та спеціальні фільтри
     for (const [k, v] of Object.entries(req.query)) {
       if (!ALLOWED_FILTERS.has(k)) continue;
       if (v === undefined || v === null || v === '') continue;
+
+      // Спеціальна обробка для системи (integrated_systems LIKE ...)
+      if (k === 'system') {
+        where.push('integrated_systems LIKE @system_like');
+        params.system_like = `%${String(v).trim()}%`; 
+        continue;
+      }
+
+      // Стандартна обробка (точне співпадіння)
       where.push(`${k} = @${k}`);
       params[k] = String(v);
     }
 
-    // q: пошук по кількох полях
+    // Пошук (q)
     if (req.query.q) {
       const q = `%${String(req.query.q).trim()}%`;
       where.push(`(
@@ -75,15 +89,23 @@ export default function camerasRoutes(db) {
       ${whereSql}
     `;
 
-    const items = db.prepare(sql).all({ ...params, limit, offset });
-    const total = db.prepare(countSql).get(params).cnt;
-
-    res.json({ ok: true, total, limit, offset, items });
+    try {
+      const items = db.prepare(sql).all({ ...params, limit, offset });
+      const total = db.prepare(countSql).get(params).cnt;
+      res.json({ ok: true, total, limit, offset, items });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ ok: false, error: e.message });
+    }
   });
 
-  // Простий endpoint для генерації фільтрів (v1)
+  // /filters endpoint залишаємо без змін...
   router.get('/filters', (req, res) => {
-    const fields = [
+     // ... (старий код для filters, він був ок)
+     // Скопіюйте сюди ту частину, що була у попередньому файлі, 
+     // або залиште як є, якщо ви не змінювали логіку заповнення списків.
+     // Для стислості тут опускаю, головне - виправити router.get('/')
+      const fields = [
       'oblast', 'raion', 'hromada',
       'camera_status', 'integration_status',
       'license_type', 'analytics_object',
@@ -102,10 +124,28 @@ export default function camerasRoutes(db) {
           LIMIT 500
         `).all();
         result[f] = rows.map(r => r.v);
-      } catch {
-        // якщо поля немає — ігноруємо
-      }
+      } catch { }
     }
+    
+    // Окремо системи, бо вони через кому
+     const systemsRaw = db.prepare(`
+      SELECT integrated_systems
+      FROM cameras
+      WHERE integrated_systems IS NOT NULL AND TRIM(integrated_systems) <> ''
+    `).all();
+    const systemsSet = new Set();
+    systemsRaw.forEach(r => {
+        String(r.integrated_systems).split(',').forEach(s => systemsSet.add(s.trim()));
+    });
+    result.systems = Array.from(systemsSet).filter(Boolean).sort();
+    
+    // Окремо статуси
+     const statusSet = new Set(db.prepare(`SELECT DISTINCT camera_status FROM cameras`).all().map(r=>r.camera_status));
+     result.camera_statuses = Array.from(statusSet).filter(Boolean).sort();
+
+     // Окремо КА
+     const kaSet = new Set(db.prepare(`SELECT DISTINCT ka_access FROM cameras`).all().map(r=>r.ka_access));
+     result.ka_access_values = Array.from(kaSet).filter(Boolean).sort();
 
     res.json({ ok: true, filters: result });
   });
