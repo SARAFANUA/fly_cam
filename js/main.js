@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const { isClusteringEnabled } = cameraRenderer.getState();
         cameraRenderer.renderCameras(items, isClusteringEnabled);
     };
-    initCameraFilters({ onChange: window.reloadCameras });
+    
 
     updateApp();
 });
