@@ -3,10 +3,79 @@ import { fetchFilters, fetchCameraIdSuggest } from '../api/filtersApi.js';
 
 function $(id) { return document.getElementById(id); }
 
+// HTML-шаблон фільтрів
+const FILTERS_TEMPLATE = `
+<div class="filters-container">
+    <div class="panel">
+        <h3>Пошук</h3>
+        <div class="field">
+            <span>ID камери</span>
+            <input type="text" id="filter-camera-id" list="filter-camera-id-datalist" placeholder="Введіть ID..." autocomplete="off">
+            <datalist id="filter-camera-id-datalist"></datalist>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>Локація</h3>
+        <div class="grid-2">
+            <div class="field grid-span-2">
+                <span>Область</span>
+                <select id="filter-oblast"><option value="">Усі області</option></select>
+            </div>
+            <div class="field">
+                <span>Район</span>
+                <select id="filter-raion"><option value="">Усі райони</option></select>
+            </div>
+            <div class="field">
+                <span>Громада</span>
+                <select id="filter-hromada"><option value="">Усі громади</option></select>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>Технічні параметри</h3>
+        <div class="grid-2">
+            <div class="field">
+                <span>Стан</span>
+                <select id="filter-camera-status"><option value="">Будь-який</option></select>
+            </div>
+            <div class="field">
+                <span>Система</span>
+                <select id="filter-system"><option value="">Будь-яка</option></select>
+            </div>
+            <div class="field grid-span-2">
+                <span>Доступ КА</span>
+                <select id="filter-ka-access"><option value="">Будь-яке</option></select>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>Аналітика</h3>
+        <div class="field">
+            <span>Функціонал</span>
+            <select id="filter-license-type"><option value="">Будь-який</option></select>
+        </div>
+        <div class="field">
+            <span>Об'єкт аналітики</span>
+            <select id="filter-analytics-object"><option value="">Будь-який</option></select>
+        </div>
+    </div>
+
+    <div class="filter-actions">
+        <button id="filter-reset-btn" class="btn-secondary" style="background: var(--danger-color); color: white;">
+            <i class="fa-solid fa-rotate-left"></i> Скинути фільтри
+        </button>
+    </div>
+</div>
+`;
+
 function fillSelect(selectEl, items, placeholder = '—') {
   if (!selectEl) return;
   const current = selectEl.value;
   selectEl.innerHTML = '';
+  
   const opt0 = document.createElement('option');
   opt0.value = '';
   opt0.textContent = placeholder;
@@ -19,7 +88,6 @@ function fillSelect(selectEl, items, placeholder = '—') {
     selectEl.appendChild(opt);
   }
 
-  // спроба зберегти вибір
   if (items.includes(current)) selectEl.value = current;
 }
 
@@ -32,6 +100,15 @@ function debounce(fn, ms = 250) {
 }
 
 export function initCameraFilters({ onChange } = {}) {
+  // 1. Спочатку рендеримо HTML у контейнер
+  const container = $('camera-modal-body');
+  if (!container) {
+      console.error('Container #camera-modal-body not found!');
+      return;
+  }
+  container.innerHTML = FILTERS_TEMPLATE;
+
+  // 2. Тепер вибираємо елементи (вони вже існують в DOM)
   const inputCameraId = $('filter-camera-id');
   const datalist = $('filter-camera-id-datalist');
 
@@ -66,7 +143,9 @@ export function initCameraFilters({ onChange } = {}) {
     const oblast = selOblast?.value || '';
     const raion = selRaion?.value || '';
 
-    const data = await fetchFilters({ oblast, raion });
+    // Припускаємо, що fetchFilters працює коректно і повертає об'єкт
+    const data = await fetchFilters({ oblast, raion }); 
+    if (!data) return;
 
     fillSelect(selOblast, data.oblasts || [], 'Усі області');
     fillSelect(selRaion, data.raions || [], oblast ? 'Усі райони' : 'Спочатку обери область');
@@ -76,7 +155,7 @@ export function initCameraFilters({ onChange } = {}) {
     fillSelect(selSystem, data.systems || [], 'Будь-яка система');
     fillSelect(selKa, data.ka_access_values || [], 'КА: будь-яке');
 
-    // license_type і analytics_object — сталі списки (заповнюємо один раз, якщо ще порожні)
+    // Сталі списки
     if (selLicense && selLicense.options.length <= 1) {
       fillSelect(selLicense, [
         'Оглядові',
@@ -113,7 +192,7 @@ export function initCameraFilters({ onChange } = {}) {
     onChange?.(f);
   };
 
-  // ---- camera_id suggest ----
+  // ---- Listener Logic ----
   const suggest = debounce(async () => {
     if (!inputCameraId || !datalist) return;
     const q = inputCameraId.value.trim();
@@ -131,11 +210,9 @@ export function initCameraFilters({ onChange } = {}) {
     }
   }, 250);
 
-  // ---- listeners ----
   inputCameraId?.addEventListener('input', () => { suggest(); triggerChange(); });
 
   selOblast?.addEventListener('change', async () => {
-    // скидаємо залежні
     if (selRaion) selRaion.value = '';
     if (selHromada) selHromada.value = '';
     await loadFiltersLists();
@@ -148,29 +225,20 @@ export function initCameraFilters({ onChange } = {}) {
     triggerChange();
   });
 
-  selHromada?.addEventListener('change', triggerChange);
-  selLicense?.addEventListener('change', triggerChange);
-  selAnalyticsObj?.addEventListener('change', triggerChange);
-  selStatus?.addEventListener('change', triggerChange);
-  selSystem?.addEventListener('change', triggerChange);
-  selKa?.addEventListener('change', triggerChange);
+  [selHromada, selLicense, selAnalyticsObj, selStatus, selSystem, selKa].forEach(el => {
+      el?.addEventListener('change', triggerChange);
+  });
 
   btnReset?.addEventListener('click', async () => {
-    if (inputCameraId) inputCameraId.value = '';
-    if (selOblast) selOblast.value = '';
-    if (selRaion) selRaion.value = '';
-    if (selHromada) selHromada.value = '';
-    if (selLicense) selLicense.value = '';
-    if (selAnalyticsObj) selAnalyticsObj.value = '';
-    if (selStatus) selStatus.value = '';
-    if (selSystem) selSystem.value = '';
-    if (selKa) selKa.value = '';
-
+    // Очищення полів
+    const inputs = [inputCameraId, selOblast, selRaion, selHromada, selLicense, selAnalyticsObj, selStatus, selSystem, selKa];
+    inputs.forEach(el => { if(el) el.value = ''; });
     if (datalist) datalist.innerHTML = '';
+    
     await loadFiltersLists();
     triggerChange();
   });
 
-  // init
+  // Запуск при старті
   loadFiltersLists().then(triggerChange).catch(console.error);
 }
