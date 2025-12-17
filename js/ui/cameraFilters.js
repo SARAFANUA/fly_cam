@@ -69,42 +69,30 @@ export function initCameraFilters({ onChange } = {}) {
     };
   }
 
+ // js/ui/cameraFilters.js (всередині initCameraFilters)
+
   async function loadFiltersLists() {
     const oblast = selOblast?.value || '';
     const raion = selRaion?.value || '';
 
-    try {
-        const data = await fetchFilters({ oblast, raion }); 
-        if (!data) return;
+    const data = await fetchFilters({ oblast, raion }); 
+    if (!data) return;
 
-        fillSelect(selOblast, data.oblasts || [], 'Усі області');
-        fillSelect(selRaion, data.raions || [], oblast ? 'Усі райони' : 'Спочатку обери область');
-        fillSelect(selHromada, data.hromadas || [], (oblast && raion) ? 'Усі громади' : 'Спочатку обери район');
+    fillSelect(selOblast, data.oblasts || [], 'Усі області');
+    fillSelect(selRaion, data.raions || [], oblast ? 'Усі райони' : 'Спочатку обери область');
+    fillSelect(selHromada, data.hromadas || [], (oblast && raion) ? 'Усі громади' : 'Спочатку обери район');
 
-        fillSelect(selStatus, data.camera_statuses || [], 'Будь-який стан');
-        fillSelect(selSystem, data.systems || [], 'Будь-яка система');
-        fillSelect(selKa, data.ka_access_values || [], 'КА: будь-яке');
+    fillSelect(selStatus, data.camera_statuses || [], 'Будь-який стан');
+    fillSelect(selSystem, data.systems || [], 'Будь-яка система');
+    fillSelect(selKa, data.ka_access_values || [], 'КА: будь-яке');
 
-        // Статичні списки (якщо бекенд їх не повернув або вони порожні)
-        if (selLicense && selLicense.options.length <= 1) {
-          fillSelect(selLicense, [
-            'Оглядові', 'З функ. розпіз. номерних знаків ТЗ', 'З функ. розпіз. кол./ типу/ марки ТЗ',
-            'З наявністю стробоскопу', 'З функ. розпіз. обличь водія', 'З функ. фіксації ваги транспортного засобу',
-            'З функ. фіксації перевищення швидкості руху', 'З функ. фіксації інших адміністративних правопорушень ТЗ',
-            'З функ. розпіз. обличь (не водія)', 'З функ. розпіз. атрибутів одягу особи',
-            'З функ. детектора залишених предметів', 'З функ. виявлення скупчення людей',
-            'З функ. фіксації інцидентів', 'З функ. аналіз. навк. середовища',
-            'З функ. фіксації інфрачер. випром. (тепловізійні)', 'З іншим аналітичним функціоналом',
-          ], 'Будь-який функціонал');
-        }
-
-        if (selAnalyticsObj && selAnalyticsObj.options.length <= 1) {
-          fillSelect(selAnalyticsObj, [
-            'Без аналітичних функцій', 'Відносно ТЗ', 'Відносно особи', 'Інші аналітичні',
-          ], 'Будь-який обʼєкт аналітики');
-        }
-    } catch (e) {
-        console.error("Помилка завантаження фільтрів:", e);
+    // ✅ ВИПРАВЛЕНО: Використовуємо реальні дані з БД замість статичних, якщо вони є
+    if (data.license_type && data.license_type.length > 0) {
+        fillSelect(selLicense, data.license_type, 'Будь-який функціонал');
+    }
+    
+    if (data.analytics_object && data.analytics_object.length > 0) {
+        fillSelect(selAnalyticsObj, data.analytics_object, 'Будь-який обʼєкт аналітики');
     }
   }
 
