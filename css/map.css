@@ -129,3 +129,139 @@
     line-height: 34px !important; font-size: 1.5em; font-weight: bold;
     text-decoration: none; border-radius: 0 !important;
 }
+/* css/map.css */
+
+/* ... (стилі маркерів залишаємо без змін) ... */
+
+/* --- МІНІМАЛІСТИЧНІ КЛАСТЕРИ --- */
+
+.custom-cluster {
+    background: transparent;
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+}
+
+.custom-cluster .cluster-content {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    z-index: 2;
+    /* Чітка біла обводка для контрасту з картою */
+    border: 3px solid #ffffff; 
+    /* Легка, акуратна тінь */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s ease; /* Ефект при наведенні */
+}
+
+.custom-cluster:hover .cluster-content {
+    transform: scale(1.1); /* Легке збільшення при наведенні */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+}
+
+/* Іконка камери */
+.cluster-icon {
+    font-size: 14px;
+    margin-bottom: 2px;
+    opacity: 0.9;
+}
+
+/* Цифра */
+.cluster-count {
+    font-weight: 700;
+    font-size: 13px;
+    line-height: 1;
+}
+
+/* --- КОЛЬОРОВА ГАМА (Монохромний синій) --- */
+
+/* Малі групи (Громади): Світло-синій / Сіро-синій */
+.cluster-small .cluster-content {
+    background-color: #64748b; /* Slate-500 */
+    /* Або світліший бренд: #60a5fa (Blue-400) */
+}
+
+/* Середні групи (Райони): Основний брендовий колір */
+.cluster-district .cluster-content {
+    background-color: #2563eb; /* Blue-600 (Ваш Primary) */
+}
+
+/* Великі групи (Області): Темно-синій */
+.cluster-region .cluster-content {
+    background-color: #1e3a8a; /* Blue-900 */
+}
+
+/* Збільшуємо шрифт для великих кластерів */
+.cluster-region .cluster-count { font-size: 15px; }
+.cluster-region .cluster-icon { font-size: 18px; }
+
+/* Павутинка (spiderfy) - робимо тоншою і темною */
+.leaflet-cluster-spider-leg {
+    stroke: #334155;
+    stroke-width: 1.5;
+    opacity: 0.7;
+}
+
+
+/* --- ІКОНКА КАМЕРИ З АЗИМУТОМ --- */
+
+.camera-combined-icon {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible; 
+}
+
+.camera-marker-body {
+    width: 30px; 
+    height: 30px; 
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    color: white; 
+    font-size: 14px;
+    z-index: 10; 
+    position: relative;
+}
+
+/* Контейнер для конуса */
+.camera-fov-container {
+    position: absolute;
+    top: 50%; 
+    left: 50%;
+    width: 0; 
+    height: 0;
+    z-index: 1;
+    pointer-events: none;
+    
+    /* ЛОГІКА ВИДИМОСТІ */
+    opacity: 0; /* Сховано за замовчуванням */
+    transition: opacity 0.3s ease-in-out; /* Плавна поява */
+    /* transform задається в JS */
+}
+
+/* Глобальний клас на карті (додається JS при zoom >= 14) вмикає конуси */
+.map-show-fov .camera-fov-container {
+    opacity: 1;
+}
+
+/* SVG всередині контейнера */
+.camera-fov-container svg {
+    /* Зміщуємо, щоб центр SVG (60,60) збігався з центром маркера */
+    position: absolute;
+    left: -60px; 
+    top: -60px;
+    overflow: visible;
+}
