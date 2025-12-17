@@ -1,12 +1,10 @@
+// js/main.js
 import { initializeMap } from './map/mapInitializer.js';
 import * as markerRenderer from './map/markerRenderer.js';
 import * as cameraRenderer from './map/cameraRenderer.js';
-import { initModeSwitcher } from './utils/modeSwitcher.js';
-import { initCameraFilters } from './ui/cameraFilters.js';
 import { fetchCameras } from './api/camerasApi.js';
-import { initCameraModal } from './ui/cameraModal.js';
+import { initCameraPanel } from './ui/cameraPanel.js';
 
-// Нові модулі
 import { store } from './state/store.js';
 import { getElements, showMessage } from './ui/dom.js';
 import { mapService } from './services/mapService.js';
@@ -15,7 +13,6 @@ import { sidebarUI } from './ui/sidebarUI.js';
 
 let map;
 
-// --- Основна логіка оновлення ---
 async function updateApp() {
     await mapService.renderAll(store);
     
@@ -39,7 +36,6 @@ async function updateApp() {
     });
 
     updateDetails();
-    ui.openModalBtn.disabled = !store.activeRouteId;
 }
 
 function updateDetails() {
@@ -48,8 +44,6 @@ function updateDetails() {
         onPointClick: (rid, idx) => markerRenderer.highlightSegment(rid, idx)
     });
 }
-
-// --- Controller Actions ---
 
 function selectRoute(id) {
     store.activeRouteId = id;
@@ -84,18 +78,16 @@ function handleDateFilter(date, event) {
     showMessage(msg, 'info', () => { store.globalDateFilter.clear(); updateApp(); });
 }
 
-// --- Ініціалізація ---
-
 document.addEventListener('DOMContentLoaded', () => {
     map = initializeMap();
     mapService.init(map);
     cameraRenderer.setMapInstance(map);
-    initModeSwitcher(map);
-    initCameraModal(map);
+    
+    // Ініціалізація панелі камер (з BBOX логікою та слухачами карти)
+    initCameraPanel(map);
 
     const ui = getElements();
 
-    // Події
     ui.sidebarToggleBtn.onclick = () => {
         ui.sidebar.classList.toggle('collapsed');
         setTimeout(() => map.invalidateSize(), 300);
@@ -110,7 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
         e.target.value = '';
     };
 
-    // Drag & Drop
     if(ui.dropArea) {
         ui.dropArea.ondragover = (e) => { e.preventDefault(); ui.dropArea.classList.add('highlight'); };
         ui.dropArea.ondragleave = () => ui.dropArea.classList.remove('highlight');
@@ -125,28 +116,25 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.dropArea.querySelector('button').onclick = () => ui.fileInput.click();
     }
 
-    // Modal
     ui.openModalBtn.onclick = () => {
         if(!store.activeRouteId) return;
         ui.modalTitle.textContent = store.routes.get(store.activeRouteId).fileName;
         ui.modalBody.innerHTML = ''; 
-        // Клон списку для модалки
         const cloneSummary = ui.pointsSummary.cloneNode(true);
         const cloneList = ui.pointsList.cloneNode(true);
         ui.modalBody.append(cloneSummary, cloneList);
-        
-        // Відновлення подій в модалці (спрощено)
-        // ...Тут можна додати логіку повторного навішування подій, або використовувати делегування
         
         ui.modalContainer.classList.remove('hidden');
         ui.modalOverlay.classList.remove('hidden');
     };
     
-    const close = () => ui.modalContainer.classList.add('hidden');
+    const close = () => {
+        ui.modalContainer.classList.add('hidden');
+        ui.modalOverlay.classList.add('hidden');
+    };
     ui.closeModalBtn.onclick = close;
     ui.modalOverlay.onclick = close;
 
-    // Налаштування
     if(ui.toggleClustering) ui.toggleClustering.onchange = () => {
         store.isClusteringEnabled = ui.toggleClustering.checked;
         updateApp();
@@ -156,26 +144,36 @@ document.addEventListener('DOMContentLoaded', () => {
         updateApp();
     };
     
-    // Камери (інтеграція старого коду)
-    // Глобальна функція для перезавантаження камер
-    // Додаємо аргумент clusteringOverride
+    // Глобальна функція, яку викликає cameraPanel.js
     window.reloadCameras = async (filters, clusteringOverride = null) => {
-        const data = await fetchCameras({ ...filters, limit: 10000 });
-        const items = data?.items || [];
-        
-        // Якщо передали явне значення кластеризації - беремо його, 
-        // інакше питаємо у рендерера поточний стан
-        let isClustering;
-        if (clusteringOverride !== null && clusteringOverride !== undefined) {
-            isClustering = clusteringOverride;
-        } else {
-            const state = cameraRenderer.getState();
-            isClustering = state.isClusteringEnabled;
-        }
+        try {
+            // Запит камер (bbox передається у filters)
+            const data = await fetchCameras({ ...filters, limit: 10000 });
+            const items = data?.items || [];
+            
+            let isClustering;
+            if (clusteringOverride !== null && clusteringOverride !== undefined) {
+                isClustering = clusteringOverride;
+            } else {
+                const state = cameraRenderer.getState();
+                isClustering = state.isClusteringEnabled;
+            }
 
-        cameraRenderer.renderCameras(items, isClustering);
+            cameraRenderer.renderCameras(items, isClustering);
+            
+            // Оновлюємо підказку про кількість
+            const hint = document.getElementById('camera-panel-hint');
+            if(hint) {
+                // Якщо є bbox, додаємо уточнення для користувача
+                const suffix = filters.bbox ? ' (у видимій області)' : '';
+                hint.textContent = `Знайдено камер: ${items.length}${suffix}`;
+            }
+            
+        } catch (e) {
+            console.error("Помилка завантаження камер:", e);
+            showMessage("Не вдалося завантажити камери", "error");
+        }
     };
-    
 
     updateApp();
 });

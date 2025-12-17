@@ -1,5 +1,4 @@
 // js/map/markerRenderer.js
-
 import { getRoute } from '../api/routingService.js';
 
 let currentMapInstance;
@@ -7,7 +6,30 @@ const renderedLayers = new Map();
 let highlightLayer = null;
 let currentlyHighlighted = null;
 
-const markerClusterGroup = L.markerClusterGroup();
+const markerClusterGroup = L.markerClusterGroup({
+    showCoverageOnHover: false,
+    maxClusterRadius: 50,
+    iconCreateFunction: function(cluster) {
+        const count = cluster.getChildCount();
+        let sizeClass = 'route-cluster-small';
+        let size = 35;
+
+        if (count > 50) {
+            sizeClass = 'route-cluster-large';
+            size = 50;
+        } else if (count > 10) {
+            sizeClass = 'route-cluster-medium';
+            size = 42;
+        }
+
+        return L.divIcon({
+            html: `<span>${count}</span>`,
+            className: `route-cluster ${sizeClass}`,
+            iconSize: L.point(size, size)
+        });
+    }
+});
+
 let nonClusteredMarkersLayer = L.layerGroup(); 
 
 function findClosestPointIndex(targetPoint, geometry) {
@@ -39,12 +61,10 @@ export async function renderMarkers(route, map, routeColor, isClusteringEnabled,
     
     let pointsForMarkers = route.normalizedPoints;
 
-    // --- ОСНОВНА ЗМІНА ТУТ ---
-    // Фільтруємо по набору дат, якщо маршрут не "заблокований"
     if (dateFilter.size > 0 && !route.isLocked) {
         pointsForMarkers = route.normalizedPoints.filter(p => {
             const pointDate = new Date(p.timestamp).toLocaleDateString('uk-UA');
-            return dateFilter.has(pointDate); // Перевіряємо, чи є дата в наборі
+            return dateFilter.has(pointDate);
         });
     }
 
@@ -56,12 +76,9 @@ export async function renderMarkers(route, map, routeColor, isClusteringEnabled,
 
     if (!isClusteringEnabled && pointsToRender.length > 0) {
         const pointGroups = new Map();
-        
         pointsToRender.forEach(point => {
             const key = `${point.latitude.toFixed(6)},${point.longitude.toFixed(6)}`;
-            if (!pointGroups.has(key)) {
-                pointGroups.set(key, []);
-            }
+            if (!pointGroups.has(key)) pointGroups.set(key, []);
             pointGroups.get(key).push(point);
         });
 
@@ -74,7 +91,6 @@ export async function renderMarkers(route, map, routeColor, isClusteringEnabled,
             } else {
                 const centerLat = group[0].latitude;
                 const centerLng = group[0].longitude;
-                
                 const latOffset = offsetRadiusMeters / 111132;
                 const lngOffset = offsetRadiusMeters / (111320 * Math.cos(centerLat * Math.PI / 180));
 
@@ -82,7 +98,6 @@ export async function renderMarkers(route, map, routeColor, isClusteringEnabled,
                     const angle = (2 * Math.PI / group.length) * index;
                     const newLat = centerLat + latOffset * Math.sin(angle);
                     const newLng = centerLng + lngOffset * Math.cos(angle);
-                    
                     newPoints.push({ ...point, latitude: newLat, longitude: newLng });
                 });
             }

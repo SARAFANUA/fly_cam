@@ -12,18 +12,23 @@ function buildQuery(params = {}) {
   return q ? `?${q}` : '';
 }
 
-export async function fetchFilters({ oblast = '', raion = '' } = {}) {
-  const res = await fetch(`/api/filters${buildQuery({ oblast, raion })}`);
+export async function fetchFilters(params) {
+  const res = await fetch(`/api/filters${buildQuery(params)}`);
   if (!res.ok) throw new Error(`filters http ${res.status}`);
-  const json = await res.json();
-  if (!json.ok) throw new Error('filters bad response');
-  return json;
+  return await res.json();
 }
 
 export async function fetchCameraIdSuggest(camera_id_like, limit = 20) {
   const res = await fetch(`/api/filters/suggest${buildQuery({ camera_id_like, limit })}`);
   if (!res.ok) throw new Error(`suggest http ${res.status}`);
   const json = await res.json();
-  if (!json.ok) throw new Error('suggest bad response');
   return json.items || [];
+}
+
+// --- НОВЕ ---
+export async function searchRegion(type, query) {
+    const res = await fetch(`/api/filters/regions/search${buildQuery({ type, query })}`);
+    if (!res.ok) return [];
+    const json = await res.json();
+    return json.items || [];
 }

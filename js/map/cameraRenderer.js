@@ -1,11 +1,33 @@
 // js/map/cameraRenderer.js
 
-
-
 let currentMapInstance = null;
-
-const cameraClusterGroup = L.markerClusterGroup();
 let nonClusteredCamerasLayer = L.layerGroup();
+
+const cameraClusterGroup = L.markerClusterGroup({
+    showCoverageOnHover: false,
+    zoomToBoundsOnClick: true,
+    spiderfyOnMaxZoom: true,
+    removeOutsideVisibleBounds: true,
+    iconCreateFunction: function(cluster) {
+        const count = cluster.getChildCount();
+        let sizeClass = 'camera-cluster-small';
+        let size = 40;
+
+        if (count > 100) {
+            sizeClass = 'camera-cluster-large';
+            size = 55;
+        } else if (count > 20) {
+            sizeClass = 'camera-cluster-medium';
+            size = 48;
+        }
+
+        return L.divIcon({
+            html: `<span>${count}</span>`,
+            className: `camera-cluster ${sizeClass}`,
+            iconSize: L.point(size, size)
+        });
+    }
+});
 
 let lastRendered = {
   cameras: [],
@@ -27,11 +49,10 @@ function buildPopup(camera) {
 }
 
 function buildCameraIcon(camera) {
-  // Простий “камера-значок” divIcon (без залежностей)
   const status = (camera.camera_status || '').toLowerCase();
   const isActive = status.includes('прац') || status.includes('актив') || status.includes('on');
+  const color = isActive ? '#2563eb' : '#64748b'; 
 
-  const color = isActive ? '#2563eb' : '#64748b'; // синій / сірий
   const html = `
     <div class="camera-marker" style="
       width: 26px; height: 26px; border-radius: 50%;
@@ -107,10 +128,8 @@ export function renderCameras(cameras = [], isClusteringEnabled = true) {
   }
 }
 
-/**
- * Для “перемикача кластеризації” без повторного fetch.
- */
-export function rerenderLast() {
+export function rerenderLast(isClusteringEnabled) {
+  lastRendered.isClusteringEnabled = !!isClusteringEnabled;
   renderCameras(lastRendered.cameras, lastRendered.isClusteringEnabled);
 }
 

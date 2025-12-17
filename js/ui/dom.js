@@ -1,5 +1,8 @@
+// js/ui/dom.js
+
 // Ледачий гетер (lazy getter) для елементів
 export const getElements = () => ({
+    // Лівий сайдбар
     sidebar: document.getElementById('sidebar'),
     sidebarToggleBtn: document.getElementById('sidebar-toggle-btn'),
     dropArea: document.getElementById('drop-area'),
@@ -24,8 +27,13 @@ export const getElements = () => ({
     // Controls
     toggleClustering: document.getElementById('toggle-clustering-btn'),
     vehicleSelect: document.getElementById('vehicle-type-select'),
-    toggleOverlay: document.getElementById('toggle-overlay-btn'),
-    resizer: document.getElementById('resizer')
+    resizer: document.getElementById('resizer'),
+
+    // --- НОВЕ: Правий сайдбар (Камери) ---
+    sidebarRight: document.getElementById('sidebar-right'),
+    openCameraPanelBtn: document.getElementById('open-camera-panel-btn'),
+    closeCameraPanelBtn: document.getElementById('close-right-sidebar-btn'),
+    cameraFiltersContainer: document.getElementById('camera-filters-container')
 });
 
 // Утиліта для повідомлень

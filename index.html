@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FlyKA Tracker</title>
+    <title>FlyKA Platform</title>
 
     <link rel="icon" href="favicon.png" type="image/png">
 
@@ -23,7 +23,7 @@
     <div class="sidebar" id="sidebar">
         <div class="sidebar-content">
             <div class="sidebar-header">
-                <h1>Аналіз маршруту</h1>
+                <h1>FlyKA Platform</h1>
                 <div id="drop-area" class="drop-area">
                     <input type="file" id="file-input" accept=".csv, .xlsx, .xls" multiple hidden>
                     <button class="select-files-btn">Обрати файли</button>
@@ -34,7 +34,7 @@
             <div class="sidebar-scrollable-content">
                 <div class="map-controls">
                     <div class="map-controls-group clustering-group">
-                        <span id="clustering-label">Кластерізація</span>
+                        <span id="clustering-label">Кластери (Маршрут)</span>
                         <label class="toggle-switch">
                             <input type="checkbox" id="toggle-clustering-btn" checked>
                             <span class="slider"></span>
@@ -50,6 +50,10 @@
                             <option value="train">Залізна дорога</option>
                         </select>
                     </div>
+
+                    <button id="open-camera-panel-btn" class="select-files-btn" style="width:100%; margin-top:10px; background: var(--primary-color-dark);">
+                        <i class="fa-solid fa-video"></i> Фільтри камер
+                    </button>
                 </div>
 
                 <div id="file-list-container" class="file-list-container">
@@ -60,20 +64,12 @@
                 <div id="points-list-container" class="points-list-container">
                     <div class="points-list-header">
                         <h3>Деталі: <span id="points-list-routename"></span></h3>
-
                         <div class="points-header-actions" style="display:flex; gap:8px;">
-                            <!-- НОВА КНОПКА: Камери -->
-                            <button id="open-camera-modal-btn" title="Фільтр та налаштування камер">
-                                <i class="fa-solid fa-camera"></i>
-                            </button>
-
-                            <!-- ІСНУЮЧА: Деталі маршруту -->
                             <button id="open-details-modal-btn" title="Відкрити у новому вікні">
                                 <i class="fa-solid fa-up-right-from-square"></i>
                             </button>
                         </div>
                     </div>
-
                     <div id="points-list-summary" class="sticky-summary"></div>
                     <ul id="points-list-items">
                         <li class="empty-list-item">Оберіть маршрут для перегляду</li>
@@ -86,9 +82,8 @@
                     <h3>Фільтр по даті</h3>
                     <ul id="unique-dates-sidebar-list" class="date-filter-list"></ul>
                 </div>
-
                 <div id="message" class="message"></div>
-                <p class="developer-info">Розроблено: Михайло Сарафанюк</p>
+                <p class="developer-info">FlyKA Platform v2.0</p>
             </div>
         </div>
     </div>
@@ -97,17 +92,24 @@
 
     <div id="map"></div>
 
-    <!-- МОДАЛКА: Деталі маршруту (як була) -->
+    <div class="sidebar-right" id="sidebar-right">
+        <div class="sidebar-content">
+            <div class="sidebar-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0;">Фільтри та налаштування камер</h3>
+                <button id="close-right-sidebar-btn" class="filter-reset-btn" style="font-size:24px;">&times;</button>
+            </div>
+            
+            <div class="sidebar-scrollable-content" id="camera-filters-container">
+                </div>
+        </div>
+    </div>
+
     <div id="modal-container" class="modal-container hidden">
         <div id="modal-overlay" class="modal-overlay"></div>
         <div class="modal-content" id="modal-content">
             <div class="modal-header" id="modal-header">
                 <h3 id="modal-title">Деталі маршруту</h3>
                 <div class="modal-header-controls">
-                    <label class="toggle-switch-small" title="Вимкнути затемнення фону">
-                        <input type="checkbox" id="toggle-overlay-btn">
-                        <span class="slider-small"></span>
-                    </label>
                     <button id="modal-close-btn" class="modal-close-btn">&times;</button>
                 </div>
             </div>
@@ -116,33 +118,8 @@
         </div>
     </div>
 
-    <!-- НОВА МОДАЛКА: Фільтр/налаштування камер -->
-    <div id="camera-modal-container" class="modal-container hidden">
-        <div id="camera-modal-overlay" class="modal-overlay"></div>
-
-        <div class="modal-content" id="camera-modal-content">
-            <div class="modal-header" id="camera-modal-header">
-                <h3 id="camera-modal-title">Фільтр та налаштування камер</h3>
-                <div class="modal-header-controls">
-                    <label class="toggle-switch-small" title="Вимкнути затемнення фону">
-                        <input type="checkbox" id="camera-toggle-overlay-btn">
-                        <span class="slider-small"></span>
-                    </label>
-                    <button id="camera-modal-close-btn" class="modal-close-btn">&times;</button>
-                </div>
-            </div>
-
-            <div class="modal-body" id="camera-modal-body">
-                <!-- Тут JS вставить панель фільтрів -->
-            </div>
-
-            <div class="resizer" id="camera-resizer"></div>
-        </div>
-    </div>
-
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 

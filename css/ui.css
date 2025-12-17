@@ -138,3 +138,207 @@ input:checked + .slider-small:before { transform: translateX(14px); }
 }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .grid-span-2 { grid-column: span 2; }
+
+/* css/ui.css */
+/* ... (залишаємо попередні стилі кнопок, модалок) ... */
+
+/* --- Нові стилі панелі камер --- */
+
+.camera-panel-wrapper {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+.panel-header-controls {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(5px);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.control-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.control-label {
+    font-size: 0.95em;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.control-label i { color: var(--primary-color); opacity: 0.8; }
+
+
+/* --- Поля (Inputs & Selects) --- */
+.field-group {
+    margin-bottom: 15px;
+}
+
+.field-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.85em;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.field-label .hint {
+    font-size: 0.8em;
+    text-transform: none;
+    font-weight: 400;
+    color: var(--success-color);
+    opacity: 0.8;
+}
+
+.styled-input, .styled-select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background-color: white;
+    font-size: 0.95em;
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    box-sizing: border-box; /* Важливо! */
+}
+
+.styled-input:focus, .styled-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.styled-input::placeholder {
+    color: #9ca3af;
+}
+
+/* Іконка пошуку всередині інпута */
+.input-wrapper {
+    position: relative;
+}
+.input-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    pointer-events: none;
+}
+.input-wrapper .styled-input {
+    padding-left: 36px;
+}
+
+/* Блок регіонів */
+.region-filters-block {
+    background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1px solid #e2e8f0;
+}
+
+/* Кнопка скидання */
+.btn-reset {
+    width: 100%;
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    background-color: #fee2e2;
+    color: #dc2626;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-reset:hover {
+    background-color: #fecaca;
+}
+
+.results-hint {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* --- Custom Autocomplete Dropdown --- */
+.input-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+/* Контейнер списку */
+.autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 3000; /* Поверх всього */
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 0 0 8px 8px; /* Заокруглення знизу */
+    max-height: 250px; /* Обмеження висоти */
+    overflow-y: auto;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    display: none; /* Сховано за замовчуванням */
+    margin-top: 2px;
+}
+
+/* Елемент списку */
+.autocomplete-item {
+    padding: 10px 12px;
+    font-size: 0.9em;
+    color: var(--text-primary);
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background-color 0.15s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item:hover, .autocomplete-item.focused {
+    background-color: #eff6ff; /* Світло-синій фон при наведенні */
+    color: var(--primary-color-dark);
+}
+
+/* Додаткова інформація в підказці (наприклад, область для району) */
+.autocomplete-meta {
+    font-size: 0.75em;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+
+/* Скролбар для списку */
+.autocomplete-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+.autocomplete-dropdown::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+.autocomplete-dropdown::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+.autocomplete-dropdown::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}

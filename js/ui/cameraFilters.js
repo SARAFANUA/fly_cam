@@ -1,31 +1,79 @@
 // js/ui/cameraFilters.js
-import { fetchFilters, fetchCameraIdSuggest } from '../api/filtersApi.js';
+import { fetchFilters, fetchCameraIdSuggest, searchRegion } from '../api/filtersApi.js';
 
 function $(id) { return document.getElementById(id); }
 
-// Допоміжна функція для заповнення select
 function fillSelect(selectEl, items, placeholder = '—') {
   if (!selectEl) return;
   const current = selectEl.value;
   selectEl.innerHTML = '';
-  
   const opt0 = document.createElement('option');
   opt0.value = '';
   opt0.textContent = placeholder;
   selectEl.appendChild(opt0);
-
-  for (const v of items) {
+  const uniqueItems = [...new Set(items)].filter(Boolean).sort();
+  for (const v of uniqueItems) {
     const opt = document.createElement('option');
     opt.value = v;
     opt.textContent = v;
     selectEl.appendChild(opt);
   }
-
-  // Якщо старе значення є в новому списку — залишаємо його
-  if (items.includes(current)) selectEl.value = current;
+  if (current && uniqueItems.includes(current)) selectEl.value = current;
 }
 
-function debounce(fn, ms = 250) {
+// --- НОВА ФУНКЦІЯ РЕНДЕРУ ВИПАДАЮЧОГО СПИСКУ ---
+function renderDropdown(dropdownEl, items, onSelect, metaKey = null) {
+    if (!dropdownEl) return;
+    dropdownEl.innerHTML = '';
+
+    if (!items || items.length === 0) {
+        dropdownEl.style.display = 'none';
+        return;
+    }
+
+    items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'autocomplete-item';
+        
+        // Визначаємо основний текст і мета-інформацію
+        let mainText = '';
+        let metaText = '';
+
+        if (typeof item === 'object') {
+             // Для регіонів
+             if (item.hromada) { mainText = item.hromada; metaText = `${item.raion || ''}, ${item.oblast || ''}`; }
+             else if (item.raion) { mainText = item.raion; metaText = item.oblast || ''; }
+             else if (item.oblast) { mainText = item.oblast; }
+             // Для ID камер
+             else if (item.camera_id) { mainText = item.camera_id; metaText = item.camera_name || ''; }
+        } else {
+            mainText = item;
+        }
+
+        const spanMain = document.createElement('span');
+        spanMain.textContent = mainText;
+        div.appendChild(spanMain);
+
+        if (metaText) {
+            const spanMeta = document.createElement('span');
+            spanMeta.className = 'autocomplete-meta';
+            spanMeta.textContent = metaText;
+            div.appendChild(spanMeta);
+        }
+
+        div.onmousedown = (e) => {
+            e.preventDefault(); // Щоб інпут не втрачав фокус передчасно
+            onSelect(item);
+            dropdownEl.style.display = 'none';
+        };
+
+        dropdownEl.appendChild(div);
+    });
+
+    dropdownEl.style.display = 'block';
+}
+
+function debounce(fn, ms = 300) {
   let t = null;
   return (...args) => {
     clearTimeout(t);
@@ -33,128 +81,139 @@ function debounce(fn, ms = 250) {
   };
 }
 
-// Ця функція тепер ТІЛЬКИ навішує події та вантажить дані
 export function initCameraFilters({ onChange } = {}) {
-  // Шукаємо елементи (вони вже мають бути створені в cameraModal.js)
-  const inputCameraId = $('filter-camera-id');
-  const datalist = $('filter-camera-id-datalist');
+  const els = {
+    // Inputs
+    id: $('filter-camera-id'),
+    ddId: $('dropdown-camera-id'), // Новий div
+    
+    oblast: $('filter-oblast'),
+    ddOblast: $('dropdown-oblast'), // Новий div
+    
+    raion: $('filter-raion'),
+    ddRaion: $('dropdown-raion'), // Новий div
+    
+    hromada: $('filter-hromada'),
+    ddHromada: $('dropdown-hromada'), // Новий div
 
-  const selOblast = $('filter-oblast');
-  const selRaion = $('filter-raion');
-  const selHromada = $('filter-hromada');
+    // Selects
+    license: $('filter-license-type'),
+    analytics: $('filter-analytics-object'),
+    status: $('filter-camera-status'),
+    system: $('filter-system'),
+    ka: $('filter-ka-access'),
+    resetBtn: $('filter-reset-btn')
+  };
 
-  const selLicense = $('filter-license-type');
-  const selAnalyticsObj = $('filter-analytics-object');
-
-  const selStatus = $('filter-camera-status');
-  const selSystem = $('filter-system');
-  const selKa = $('filter-ka-access');
-
-  const btnReset = $('filter-reset-btn');
-
-  // Якщо елементів немає (модалка закрита або HTML не той) — виходимо
-  if (!selOblast) return;
+  if (!els.oblast) return;
 
   function getFilters() {
     return {
-      camera_id_like: inputCameraId?.value?.trim() || '',
-      oblast: selOblast?.value || '',
-      raion: selRaion?.value || '',
-      hromada: selHromada?.value || '',
-      license_type: selLicense?.value || '',
-      analytics_object: selAnalyticsObj?.value || '',
-      camera_status: selStatus?.value || '',
-      system: selSystem?.value || '',
-      ka_access: selKa?.value || '',
+      camera_id_like: els.id?.value?.trim() || '',
+      oblast: els.oblast?.value?.trim() || '',
+      raion: els.raion?.value?.trim() || '',
+      hromada: els.hromada?.value?.trim() || '',
+      license_type: els.license?.value || '',
+      analytics_object: els.analytics?.value || '',
+      camera_status: els.status?.value || '',
+      system: els.system?.value || '',
+      ka_access: els.ka?.value || '',
     };
   }
 
- // js/ui/cameraFilters.js (всередині initCameraFilters)
+  const triggerChange = debounce(() => {
+    onChange?.(getFilters());
+  }, 500);
 
-  async function loadFiltersLists() {
-    const oblast = selOblast?.value || '';
-    const raion = selRaion?.value || '';
+  // --- ОБРОБНИКИ ПОДІЙ ---
 
-    const data = await fetchFilters({ oblast, raion }); 
-    if (!data) return;
+  // Закриття списків при кліку зовні
+  document.addEventListener('mousedown', (e) => {
+      [els.ddId, els.ddOblast, els.ddRaion, els.ddHromada].forEach(dd => {
+          if (dd && dd.style.display === 'block' && !dd.contains(e.target) && e.target.tagName !== 'INPUT') {
+              dd.style.display = 'none';
+          }
+      });
+  });
 
-    fillSelect(selOblast, data.oblasts || [], 'Усі області');
-    fillSelect(selRaion, data.raions || [], oblast ? 'Усі райони' : 'Спочатку обери область');
-    fillSelect(selHromada, data.hromadas || [], (oblast && raion) ? 'Усі громади' : 'Спочатку обери район');
+  // 1. ГРОМАДА
+  els.hromada.addEventListener('input', async (e) => {
+      const val = e.target.value.trim();
+      if (val.length < 2) { els.ddHromada.style.display = 'none'; return; }
+      
+      const items = await searchRegion('hromada', val);
+      renderDropdown(els.ddHromada, items, (item) => {
+          els.hromada.value = item.hromada;
+          if (item.raion) els.raion.value = item.raion;
+          if (item.oblast) els.oblast.value = item.oblast;
+          triggerChange();
+      });
+  });
 
-    fillSelect(selStatus, data.camera_statuses || [], 'Будь-який стан');
-    fillSelect(selSystem, data.systems || [], 'Будь-яка система');
-    fillSelect(selKa, data.ka_access_values || [], 'КА: будь-яке');
+  // 2. РАЙОН
+  els.raion.addEventListener('input', async (e) => {
+      const val = e.target.value.trim();
+      if (val.length < 2) { els.ddRaion.style.display = 'none'; return; }
 
-    // ✅ ВИПРАВЛЕНО: Використовуємо реальні дані з БД замість статичних, якщо вони є
-    if (data.license_type && data.license_type.length > 0) {
-        fillSelect(selLicense, data.license_type, 'Будь-який функціонал');
-    }
-    
-    if (data.analytics_object && data.analytics_object.length > 0) {
-        fillSelect(selAnalyticsObj, data.analytics_object, 'Будь-який обʼєкт аналітики');
-    }
-  }
+      const items = await searchRegion('raion', val);
+      renderDropdown(els.ddRaion, items, (item) => {
+          els.raion.value = item.raion;
+          if (item.oblast) els.oblast.value = item.oblast;
+          triggerChange();
+      });
+  });
 
-  const triggerChange = () => {
-    const f = getFilters();
-    onChange?.(f);
-  };
+  // 3. ОБЛАСТЬ
+  els.oblast.addEventListener('input', async (e) => {
+      const val = e.target.value.trim();
+      if (val.length < 2) { els.ddOblast.style.display = 'none'; return; }
+      const items = await searchRegion('oblast', val);
+      renderDropdown(els.ddOblast, items, (item) => {
+          els.oblast.value = item.oblast;
+          triggerChange();
+      });
+  });
 
-  // ---- Події ----
-
-  // Автодоповнення ID
-  const suggest = debounce(async () => {
-    if (!inputCameraId || !datalist) return;
-    const q = inputCameraId.value.trim();
-    if (q.length < 2) {
-      datalist.innerHTML = '';
-      return;
-    }
+  // 4. ID КАМЕРИ
+  els.id.addEventListener('input', debounce(async () => {
+    const q = els.id.value.trim();
+    if (q.length < 2) { els.ddId.style.display = 'none'; return; }
     try {
         const items = await fetchCameraIdSuggest(q, 20);
-        datalist.innerHTML = '';
-        for (const it of items) {
-          const opt = document.createElement('option');
-          opt.value = it.camera_id;
-          opt.label = it.camera_name || '';
-          datalist.appendChild(opt);
-        }
+        renderDropdown(els.ddId, items, (item) => {
+            els.id.value = item.camera_id;
+            triggerChange();
+        });
+    } catch(e){}
+    triggerChange(); // Також оновлюємо фільтр під час вводу
+  }, 300));
+
+  // Load static selects
+  async function loadStaticFilters() {
+    try {
+        const data = await fetchFilters(); 
+        if (!data || !data.filters) return;
+        const f = data.filters;
+
+        fillSelect(els.status, f.camera_statuses || [], 'Будь-який стан');
+        fillSelect(els.system, f.systems || [], 'Будь-яка система');
+        fillSelect(els.ka, f.ka_access_values || [], 'КА: будь-яке');
+        fillSelect(els.license, f.license_type || [], 'Будь-який тип');
+        fillSelect(els.analytics, f.analytics_object || [], 'Будь-який об\'єкт');
     } catch(e) { console.error(e); }
-  }, 250);
+  }
 
-  // Видаляємо старі слухачі (щоб не дублювалися), використовуючи клонування або просту перевірку
-  // Але найпростіше тут — просто перезаписати onchange/onclick, де це можливо, або покластися на те,
-  // що initCameraFilters викликається один раз після створення HTML.
-  
-  inputCameraId?.addEventListener('input', () => { suggest(); triggerChange(); });
+  [els.license, els.analytics, els.status, els.system, els.ka].forEach(el => {
+      if(el) el.onchange = triggerChange;
+  });
 
-  selOblast?.addEventListener('change', async () => {
-    if (selRaion) selRaion.value = '';
-    if (selHromada) selHromada.value = '';
-    await loadFiltersLists();
+  els.resetBtn.onclick = () => {
+    [els.id, els.oblast, els.raion, els.hromada, els.license, els.analytics, els.status, els.system, els.ka].forEach(el => {
+        if(el) el.value = '';
+    });
+    [els.ddId, els.ddOblast, els.ddRaion, els.ddHromada].forEach(el => el.style.display = 'none');
     triggerChange();
-  });
+  };
 
-  selRaion?.addEventListener('change', async () => {
-    if (selHromada) selHromada.value = '';
-    await loadFiltersLists();
-    triggerChange();
-  });
-
-  [selHromada, selLicense, selAnalyticsObj, selStatus, selSystem, selKa].forEach(el => {
-      el?.addEventListener('change', triggerChange);
-  });
-
-  btnReset?.addEventListener('click', async () => {
-    const inputs = [inputCameraId, selOblast, selRaion, selHromada, selLicense, selAnalyticsObj, selStatus, selSystem, selKa];
-    inputs.forEach(el => { if(el) el.value = ''; });
-    if (datalist) datalist.innerHTML = '';
-    
-    await loadFiltersLists();
-    triggerChange();
-  });
-
-  // Первинне завантаження
-  loadFiltersLists();
+  loadStaticFilters();
 }

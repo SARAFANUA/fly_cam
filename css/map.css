@@ -35,9 +35,61 @@
     color: white; font-weight: bold; font-size: 14px;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
 }
-.marker-cluster-small { background-color: rgba(24, 128, 224, 0.8); }
-.marker-cluster-medium { background-color: rgba(240, 195, 15, 0.8); }
-.marker-cluster-large { background-color: rgba(251, 86, 77, 0.8); }
+
+/* --- НОВІ: Кластери МАРШРУТІВ (Route) --- */
+.route-cluster {
+    background-clip: padding-box;
+    border-radius: 50%;
+    text-align: center;
+    color: white;
+    font-weight: bold;
+    font-family: sans-serif;
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    line-height: 40px; 
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+}
+.route-cluster-small { background-color: rgba(110, 204, 57, 0.85); }
+.route-cluster-medium { background-color: rgba(240, 194, 12, 0.85); }
+.route-cluster-large { background-color: rgba(241, 128, 23, 0.85); }
+
+
+/* --- НОВІ: Кластери КАМЕР (Camera) --- */
+.camera-cluster {
+    background-clip: padding-box;
+    border-radius: 50%;
+    text-align: center;
+    color: white;
+    font-weight: bold;
+    font-family: sans-serif;
+    border: 3px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+    display: flex !important;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.camera-cluster-small { 
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); 
+}
+.camera-cluster-medium { 
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); 
+}
+.camera-cluster-large { 
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); 
+}
+
+.camera-cluster::before {
+    content: '\f03d';
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    font-size: 10px;
+    margin-bottom: 2px;
+    opacity: 0.8;
+}
 
 /* --- Контроли карти --- */
 .map-controls {
