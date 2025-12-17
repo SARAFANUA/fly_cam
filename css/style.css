@@ -1,0 +1,828 @@
+/* css/style.css */
+:root {
+    --sidebar-width: 400px;
+    --primary-color: #2563eb;
+    --primary-color-dark: #1e40af;
+    --primary-color-light: #3b82f6;
+    --success-color: #10b981;
+    --danger-color: #ef4444;
+    --warning-color: #f59e0b;
+    --light-bg: #f9fafb;
+    --lighter-bg: #ffffff;
+    --border-color: #e5e7eb;
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --transition-fast: 150ms ease-in-out;
+    --transition-normal: 250ms ease-in-out;
+}
+
+html, body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    height: 100vh; width: 100vw;
+    overflow: hidden; display: flex;
+    color: var(--text-primary);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ====================================================================== */
+/* --- САЙДБАР --- */
+/* ====================================================================== */
+.sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--lighter-bg);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    box-shadow: var(--shadow-lg);
+    transition: margin-left var(--transition-normal);
+    z-index: 1001;
+    position: relative;
+    flex-shrink: 0;
+    margin-left: 0;
+    backdrop-filter: blur(10px);
+}
+
+.sidebar.collapsed {
+    margin-left: calc(-1 * var(--sidebar-width));
+}
+
+.sidebar-content {
+    display: flex; 
+    flex-direction: column;
+    height: 100%; 
+    padding: 20px;
+    box-sizing: border-box; 
+    width: 100%; 
+    overflow-x: hidden; 
+    /* ВИПРАВЛЕНО: Видаляємо overflow-y: auto, щоб не було конфлікту з вкладеними прокручуваними списками */
+}
+
+.sidebar-toggle-btn {
+    position: absolute;
+    top: 50%;
+    left: var(--sidebar-width);
+    transform: translateY(-50%);
+    width: 24px;
+    height: 70px;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-light));
+    color: white;
+    border: none;
+    cursor: pointer;
+    z-index: 1000;
+    border-radius: 0 8px 8px 0;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-normal);
+    box-shadow: var(--shadow-md);
+}
+
+.sidebar.collapsed + .sidebar-toggle-btn {
+    left: 0;
+}
+
+.sidebar-toggle-btn:hover {
+    background: linear-gradient(135deg, var(--primary-color-light), var(--primary-color));
+    width: 28px;
+    box-shadow: var(--shadow-lg);
+}
+
+/* --- Структура сайдбару (flexbox) --- */
+.sidebar-header, .sidebar-footer {
+    flex-shrink: 0;
+}
+
+.sidebar-scrollable-content {
+    flex-grow: 1;
+    display: flex; flex-direction: column;
+    gap: 15px; 
+    margin: 10px 0; 
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 5px; 
+}
+
+.sidebar h1 {
+    margin-top: 0; margin-bottom: 15px; 
+    text-align: center;
+    font-size: 1.75em;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color-light) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.02em;
+}
+
+/* --- Контейнери списків --- */
+#file-list-container, #points-list-container {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background-color: var(--lighter-bg);
+    display: flex; 
+    flex-direction: column; 
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow var(--transition-fast);
+}
+
+#file-list-container:hover, #points-list-container:hover {
+    box-shadow: var(--shadow-md);
+}
+
+#file-list-container {
+    flex-shrink: 0;
+}
+
+#points-list-container {
+    flex-shrink: 0;
+}
+
+/* --- Заголовки списків: ФІКСОВАНІ --- */
+#file-list-container h3, .points-list-header h3 {
+    margin: 0;
+    font-size: 1.05em;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#file-list-container h3, .points-list-header {
+    padding: 12px 16px;
+    flex-shrink: 0;
+    background: linear-gradient(to bottom, var(--lighter-bg), var(--light-bg));
+    border-bottom: 2px solid var(--border-color);
+}
+
+.sticky-summary {
+    padding: 10px 15px;
+    position: sticky;
+    top: 0;
+    background-color: var(--light-bg);
+    z-index: 10;
+    font-size: 0.9em; color: #555;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+/* --- ВМІСТ СПИСКІВ --- */
+#route-items, #points-list-items {
+    padding: 0; 
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- Область завантаження файлів --- */
+.drop-area {
+    border: 2px dashed var(--primary-color);
+    border-radius: 12px;
+    padding: 16px; 
+    text-align: center;
+    color: var(--text-secondary);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(59, 130, 246, 0.05));
+    transition: all var(--transition-normal);
+}
+.drop-area p {
+    margin: 8px 0 0 0; 
+    font-size: 0.875em;
+    color: var(--text-secondary);
+}
+
+.drop-area.highlight {
+    border-color: var(--primary-color-light);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(59, 130, 246, 0.15));
+    transform: scale(1.02);
+}
+
+.select-files-btn {
+    display: block;
+    margin: 0 auto 8px auto; 
+    padding: 10px 24px;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-light));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+    font-weight: 600;
+    font-size: 0.95em;
+    transition: all var(--transition-fast);
+    position: relative;
+    overflow: hidden;
+}
+
+.select-files-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s;
+}
+
+.select-files-btn:hover::before {
+    left: 100%;
+}
+
+.select-files-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.select-files-btn:active {
+    transform: translateY(0);
+}
+
+/* --- Списки (маршрути та точки) --- */
+#route-items, #points-list-items, .date-filter-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.file-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-color);
+    border-left: 4px solid transparent;
+    transition: all var(--transition-fast);
+    background: var(--lighter-bg);
+    /* === ДОДАНО: Обрізати будь-який вміст, що виходить за межі === */
+    overflow-x: hidden; 
+    /* ДОДАНО: Встановлюємо явний min-width, щоб запобігти розтягуванню браузером */
+    min-width: 0; 
+}
+
+.file-list-item:hover {
+    background: var(--light-bg);
+    border-left-color: var(--primary-color-light);
+    transform: translateX(0); /* Змінено: прибираємо translateX(2px), щоб не було зсуву, який може спричинити переповнення */
+}
+.file-list-item.active {
+    background: linear-gradient(to right, rgba(37, 99, 235, 0.1), transparent);
+    border-left-color: var(--primary-color) !important;
+    font-weight: 600;
+}
+.file-list-item.route-hidden {
+    opacity: 0.5;
+}
+.file-list-item.route-hidden .route-name {
+    text-decoration: line-through;
+}
+
+.route-name {
+    cursor: pointer;
+    flex-grow: 1;
+    margin-right: 5px;
+    color: var(--text-primary);
+    /* === КОРЕКЦІЯ: Основна робота тут. Дозволяємо стискатися і обрізати, якщо потрібно === */
+    flex-shrink: 1; 
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0; /* ДОДАНО: Важливо для flex-елементів, які мають бути обмежені */
+}
+
+.route-controls { 
+    display: flex; align-items: center; 
+    white-space: nowrap; 
+    /* overflow-x: hidden; тут вже не потрібен */
+    flex-shrink: 0; /* ДОДАНО: Запобігаємо стисканню контролів, дозволяючи стискатися назві */
+}
+.route-controls button { 
+    background: none; border: none; cursor: pointer; font-size: 16px; 
+    padding: 2px 5px; line-height: 1; 
+}
+.toggle-visibility-btn { opacity: 0.7; }
+.remove-route-btn { color: #cc0000; font-weight: bold; }
+
+/* --- Список точок --- */
+.points-list-header {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--border-color);
+}
+#open-details-modal-btn {
+    background: none; border: 1px solid #ccc; border-radius: 5px; cursor: pointer;
+    font-size: 16px; padding: 2px 6px; line-height: 1;
+}
+#open-details-modal-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+#open-details-modal-btn:hover:not(:disabled) { background-color: #f0f0f0; }
+
+#points-list-items { font-size: 0.85em; }
+
+.empty-list-item {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #888;
+    padding: 20px;
+    flex-grow: 1; 
+    box-sizing: border-box;
+    text-align: center;
+}
+
+/* --- Фільтр по даті --- */
+.filter-section {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background-color: var(--lighter-bg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.filter-section h3 {
+    margin: 0;
+    padding: 12px 16px;
+    font-size: 1.05em;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: linear-gradient(to bottom, var(--lighter-bg), var(--light-bg));
+    border-bottom: 2px solid var(--border-color);
+}
+
+.filter-section h3 i {
+    color: var(--primary-color);
+    margin-right: 8px;
+}
+.message {
+    padding: 0;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    margin: 0;
+}
+.message.info {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(59, 130, 246, 0.1));
+    border-left: 4px solid var(--primary-color);
+    color: var(--primary-color-dark);
+    padding: 12px 16px;
+    margin-top: 12px;
+}
+.message.success {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.15));
+    border-left: 4px solid var(--success-color);
+    color: #065f46;
+    padding: 12px 16px;
+    margin-top: 12px;
+}
+.message.error {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.15));
+    border-left: 4px solid var(--danger-color);
+    color: #991b1b;
+    padding: 12px 16px;
+    margin-top: 12px;
+}
+
+.filter-reset-btn {
+    background: none; border: 1px solid currentColor;
+    color: inherit; opacity: 0.7; border-radius: 50%;
+    width: 22px; height: 22px; line-height: 18px;
+    text-align: center; cursor: pointer; font-weight: bold;
+    padding: 0; margin-left: 10px; flex-shrink: 0;
+}
+.filter-reset-btn:hover { opacity: 1; }
+
+/* --- ІНФОРМАЦІЯ ПРО РОЗРОБНИКА --- */
+.developer-info {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 12px 16px;
+    margin: 12px 0 0 0;
+    border-top: 1px solid var(--border-color);
+    flex-shrink: 0;
+    background: linear-gradient(to top, var(--light-bg), transparent);
+}
+
+.developer-info i {
+    color: var(--primary-color);
+    margin-right: 6px;
+}
+
+/* --- Карта та маркери --- */
+#map { flex-grow: 1; height: 100%; transition: width 0.3s ease-in-out; }
+
+.custom-marker-icon {
+    position: relative; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+}
+.custom-marker-icon .marker-pin {
+    width: 28px; height: 28px; border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg); border: 2px solid white;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+.custom-marker-icon .marker-number {
+    position: absolute; color: white;
+    font-size: 12px; font-weight: bold; text-align: center;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(217, 83, 79, 0.7); }
+    70% { box-shadow: 0 0 0 15px rgba(217, 83, 79, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(217, 83, 79, 0); }
+}
+.long-stop-marker .marker-pin {
+    background-color: var(--danger-color) !important;
+    animation: pulse 2s infinite;
+}
+
+/* --- Стилі для кластеризації --- */
+.marker-cluster {
+    display: flex; justify-content: center; align-items: center;
+    background-clip: padding-box; border-radius: 50%;
+    border: 4px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 8px rgba(0,0,0,0.6);
+    transition: all 0.2s ease-in-out;
+}
+.marker-cluster span {
+    color: white; font-weight: bold; font-size: 14px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+.marker-cluster-small { background-color: rgba(24, 128, 224, 0.8); }
+.marker-cluster-medium { background-color: rgba(240, 195, 15, 0.8); }
+.marker-cluster-large { background-color: rgba(251, 86, 77, 0.8); }
+
+/* --- Стилі для контролів карти --- */
+.map-controls {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    width: 100%;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    overflow-x: hidden;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(59, 130, 246, 0.05));
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+.map-controls-group {
+    display: flex;
+    align-items: center; /* Вирівнює вміст по центру вертикалі */
+    gap: 8px; 
+    flex-shrink: 1;
+}
+.clustering-group #clustering-label {
+    margin-right: 5px; /* Невеликий додатковий відступ від перемикача */
+}
+
+.map-controls span,
+.map-controls label {
+    font-weight: 600;
+    font-size: 0.95em;
+    color: var(--text-primary);
+    display: block;
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
+/* --- Стилі для спадаючого списку --- */
+.map-controls-group select {
+    padding: 4px 8px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background-color: white;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    flex-shrink: 1; 
+    min-width: 120px; 
+    /* ДОДАНО: Якщо хочете, щоб select займав більше місця, щоб вирівнятися з текстом */
+    width: 100%; 
+}
+.map-controls-group select:hover {
+    border-color: var(--primary-color-light);
+    background-color: var(--light-bg);
+}
+.map-controls-group select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* --- Стилі для перемикача кластеризації --- */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+}
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #cbd5e1;
+    transition: all var(--transition-normal);
+    border-radius: 28px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: all var(--transition-normal);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+input:checked + .slider {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-light));
+}
+input:checked + .slider:before {
+    transform: translateX(24px);
+}
+.slider:hover {
+    opacity: 0.9;
+}
+
+/* --- Модальне вікно --- */
+.modal-container {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 2000; transition: opacity 0.3s;
+    pointer-events: none;
+}
+.modal-container.hidden { display: none; }
+
+.modal-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    transition: background-color 0.3s;
+}
+.modal-overlay.hidden { background-color: transparent; }
+
+.modal-content {
+    background-color: white; border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 2001;
+    width: 90%; max-width: 600px; display: flex; flex-direction: column;
+    max-height: 90vh;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+    overflow: hidden;
+    min-width: 350px;
+    min-height: 300px;
+}
+.modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 15px 20px; border-bottom: 1px solid #ddd;
+    cursor: move;
+    background-color: #f7f7f7;
+    border-radius: 10px 10px 0 0;
+}
+.modal-header h3 { margin: 0; font-size: 1.2em; }
+.modal-header-controls { display: flex; align-items: center; gap: 15px; }
+.modal-close-btn { background: none; border: none; font-size: 24px; cursor: pointer; font-weight: bold; padding: 0 5px; }
+
+.modal-body {
+    overflow-y: auto;
+    padding: 0;
+    display: flex; flex-direction: column;
+}
+.modal-body .sticky-summary {
+    position: sticky; top: 0; z-index: 10;
+    background-color: var(--light-bg);
+}
+
+.resizer {
+    position: absolute; right: 0; bottom: 0;
+    width: 15px; height: 15px; cursor: se-resize;
+    background: repeating-linear-gradient(-45deg, #ccc, #ccc 1px, transparent 1px, transparent 4px);
+}
+
+.toggle-switch-small { position: relative; display: inline-block; width: 34px; height: 20px; }
+.toggle-switch-small input { opacity: 0; width: 0; height: 0; }
+.slider-small {
+    position: absolute; cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc; transition: .4s;
+    border-radius: 20px;
+}
+.slider-small:before {
+    position: absolute; content: "";
+    height: 14px; width: 14px;
+    left: 3px; bottom: 3px;
+    background-color: white; transition: .4s;
+    border-radius: 50%;
+}
+input:checked + .slider-small { background-color: var(--primary-color); }
+input:checked + .slider-small:before { transform: translateX(14px); }
+
+/* --- Стилі для списку унікальних дат у сайдбарі --- */
+.date-filter-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 200px;
+    overflow-y: auto;
+}
+.date-filter-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9em;
+    transition: all var(--transition-fast);
+    background: var(--lighter-bg);
+}
+.date-filter-list li:last-child {
+    border-bottom: none;
+}
+.date-filter-list li:hover {
+    background: var(--light-bg);
+    padding-left: 20px;
+}
+.date-filter-list li.active {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-light)) !important;
+    color: white;
+    font-weight: 600;
+    padding-left: 20px;
+}
+.date-filter-list li.active .unique-date-count {
+    background-color: rgba(255, 255, 255, 0.25);
+    color: white;
+}
+.unique-date-count {
+    background-color: var(--light-bg);
+    color: var(--text-secondary);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 600;
+    min-width: 50px;
+    text-align: center;
+}
+
+/* --- ВМІСТ СПИСКІВ: ПРОКРУЧУЄТЬСЯ --- */
+#route-items, #points-list-items {
+    padding: 0; 
+    overflow-y: auto; /* Тільки тут прокрутка */
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; 
+}
+
+/* === ДОДАНО: Обмеження висоти для списку точок у сайдбарі === */
+#points-list-items {
+    /* Розрахунок: ~5.5 рядків * 35px/рядок = ~192.5px */
+    max-height: 210px; 
+    /* Ця фіксована висота гарантує, що список буде прокручуватися, 
+       якщо він містить більше 5-6 елементів. */
+}
+
+
+/* --- Стилі для списку точок (3 колонки) --- */
+/* Цей селектор застосовується до обох: списку в сайдбарі та списку в модальному вікні */
+#points-list-items li:not(.empty-list-item),
+.modal-body ul li:not(.empty-list-item) { 
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    gap: 15px;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid #eee;
+}
+
+#points-list-items li:hover, .modal-body ul li:hover {
+    background-color: #f0f8ff;
+    cursor: pointer;
+}
+.point-index { color: #888; text-align: right; }
+.point-duration {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+.point-duration.long-stop {
+    color: var(--danger-color);
+    background-color: #f2dede;
+    padding: 2px 5px;
+    border-radius: 3px;
+}
+.point-info { display: none; }
+
+/* --- Стилі для контролів карти (масштаб) --- */
+.leaflet-control-zoom {
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+    width: 34px !important;
+    height: 34px !important;
+    background-color: var(--primary-color) !important;
+    color: white !important;
+    transition: background-color 0.2s ease-in-out !important;
+}
+.leaflet-control-zoom-in:hover,
+.leaflet-control-zoom-out:hover {
+    background-color: var(--primary-color-dark) !important;
+}
+.leaflet-control-zoom-in {
+    border-bottom: 1px solid rgba(255,255,255,0.3) !important;
+}
+.leaflet-control-zoom-out {
+    border-top: none !important;
+}
+.leaflet-control-zoom a {
+    line-height: 34px !important;
+    font-size: 1.5em;
+    font-weight: bold;
+    text-decoration: none;
+    border-radius: 0 !important;
+}
+
+.panel {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  background: rgba(255,255,255,.03);
+}
+
+.panel h3 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  opacity: .9;
+}
+
+.field {
+  display: block;
+  margin: 8px 0;
+}
+
+.field > span {
+  display: block;
+  font-size: 12px;
+  opacity: .85;
+  margin-bottom: 6px;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.25);
+  color: inherit;
+  outline: none;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.grid-span-2 {
+  grid-column: span 2;
+}
+
+.btn-secondary {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: inherit;
+  cursor: pointer;
+}
+.btn-secondary:hover {
+  background: rgba(255,255,255,.10);
+}
+
+.hidden { display: none !important; }

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlyKA Tracker</title>
+
+    <link rel="icon" href="favicon.png" type="image/png">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-content">
+            <div class="sidebar-header">
+                <h1>Аналіз маршруту</h1>
+                <div id="drop-area" class="drop-area">
+                    <input type="file" id="file-input" accept=".csv, .xlsx, .xls" multiple hidden>
+                    <button class="select-files-btn">Обрати файли</button>
+                    <p>Перетягніть файли (csv, xlsx, xls)</p>
+                </div>
+            </div>
+
+            <div class="sidebar-scrollable-content">
+                <div class="map-controls">
+                    <div class="map-controls-group clustering-group">
+                        <span id="clustering-label">Кластерізація</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-clustering-btn" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="map-controls-group vehicle-type-group">
+                        <label for="vehicle-type-select">Тип транспорту:</label>
+                        <select id="vehicle-type-select" class="custom-select">
+                            <option value="car">Легковий авто</option>
+                            <option value="truck">Вантажний автомобіль</option>
+                            <option value="foot">Піший маршрут</option>
+                            <option value="train">Залізна дорога</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="file-list-container" class="file-list-container">
+                    <h3>Завантажені маршрути:</h3>
+                    <ul id="route-items"></ul>
+                </div>
+
+                <div id="points-list-container" class="points-list-container">
+                    <div class="points-list-header">
+                        <h3>Деталі: <span id="points-list-routename"></span></h3>
+
+                        <div class="points-header-actions" style="display:flex; gap:8px;">
+                            <!-- НОВА КНОПКА: Камери -->
+                            <button id="open-camera-modal-btn" title="Фільтр та налаштування камер">
+                                <i class="fa-solid fa-camera"></i>
+                            </button>
+
+                            <!-- ІСНУЮЧА: Деталі маршруту -->
+                            <button id="open-details-modal-btn" title="Відкрити у новому вікні">
+                                <i class="fa-solid fa-up-right-from-square"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="points-list-summary" class="sticky-summary"></div>
+                    <ul id="points-list-items">
+                        <li class="empty-list-item">Оберіть маршрут для перегляду</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="filter-section">
+                    <h3>Фільтр по даті</h3>
+                    <ul id="unique-dates-sidebar-list" class="date-filter-list"></ul>
+                </div>
+
+                <div id="message" class="message"></div>
+                <p class="developer-info">Розроблено: Михайло Сарафанюк</p>
+            </div>
+        </div>
+    </div>
+
+    <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="Сховати/Показати сайдбар">«</button>
+
+    <div id="map"></div>
+
+    <!-- МОДАЛКА: Деталі маршруту (як була) -->
+    <div id="modal-container" class="modal-container hidden">
+        <div id="modal-overlay" class="modal-overlay"></div>
+        <div class="modal-content" id="modal-content">
+            <div class="modal-header" id="modal-header">
+                <h3 id="modal-title">Деталі маршруту</h3>
+                <div class="modal-header-controls">
+                    <label class="toggle-switch-small" title="Вимкнути затемнення фону">
+                        <input type="checkbox" id="toggle-overlay-btn">
+                        <span class="slider-small"></span>
+                    </label>
+                    <button id="modal-close-btn" class="modal-close-btn">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="resizer" id="resizer"></div>
+        </div>
+    </div>
+
+    <!-- НОВА МОДАЛКА: Фільтр/налаштування камер -->
+    <div id="camera-modal-container" class="modal-container hidden">
+        <div id="camera-modal-overlay" class="modal-overlay"></div>
+
+        <div class="modal-content" id="camera-modal-content">
+            <div class="modal-header" id="camera-modal-header">
+                <h3 id="camera-modal-title">Фільтр та налаштування камер</h3>
+                <div class="modal-header-controls">
+                    <label class="toggle-switch-small" title="Вимкнути затемнення фону">
+                        <input type="checkbox" id="camera-toggle-overlay-btn">
+                        <span class="slider-small"></span>
+                    </label>
+                    <button id="camera-modal-close-btn" class="modal-close-btn">&times;</button>
+                </div>
+            </div>
+
+            <div class="modal-body" id="camera-modal-body">
+                <!-- Тут JS вставить панель фільтрів -->
+            </div>
+
+            <div class="resizer" id="camera-resizer"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
