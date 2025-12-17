@@ -1,0 +1,79 @@
+/* --- Маркери --- */
+.custom-marker-icon {
+    position: relative; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+}
+.custom-marker-icon .marker-pin {
+    width: 28px; height: 28px; border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg); border: 2px solid white;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+.custom-marker-icon .marker-number {
+    position: absolute; color: white;
+    font-size: 12px; font-weight: bold; text-align: center;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(217, 83, 79, 0.7); }
+    70% { box-shadow: 0 0 0 15px rgba(217, 83, 79, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(217, 83, 79, 0); }
+}
+.long-stop-marker .marker-pin {
+    background-color: var(--danger-color) !important;
+    animation: pulse 2s infinite;
+}
+
+/* --- Кластери --- */
+.marker-cluster {
+    display: flex; justify-content: center; align-items: center;
+    background-clip: padding-box; border-radius: 50%;
+    border: 4px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 8px rgba(0,0,0,0.6);
+    transition: all 0.2s ease-in-out;
+}
+.marker-cluster span {
+    color: white; font-weight: bold; font-size: 14px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+.marker-cluster-small { background-color: rgba(24, 128, 224, 0.8); }
+.marker-cluster-medium { background-color: rgba(240, 195, 15, 0.8); }
+.marker-cluster-large { background-color: rgba(251, 86, 77, 0.8); }
+
+/* --- Контроли карти --- */
+.map-controls {
+    display: flex; justify-content: flex-start; align-items: center; gap: 16px;
+    padding: 12px 16px; flex-wrap: wrap; width: 100%; box-sizing: border-box; flex-shrink: 0;
+    overflow-x: hidden; background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(59, 130, 246, 0.05));
+    border-radius: 12px; border: 1px solid var(--border-color);
+}
+.map-controls-group { display: flex; align-items: center; gap: 8px; flex-shrink: 1; }
+.clustering-group #clustering-label { margin-right: 5px; }
+.map-controls span, .map-controls label {
+    font-weight: 600; font-size: 0.95em; color: var(--text-primary); display: block; margin-bottom: 0; white-space: nowrap;
+}
+.map-controls-group select {
+    padding: 4px 8px; border-radius: 5px; border: 1px solid #ccc; background-color: white;
+    font-size: 0.9em; cursor: pointer; transition: border-color 0.2s; flex-shrink: 1; min-width: 120px; width: 100%;
+}
+.map-controls-group select:hover { border-color: var(--primary-color-light); background-color: var(--light-bg); }
+.map-controls-group select:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+
+/* --- Zoom Controls --- */
+.leaflet-control-zoom {
+    border: none !important; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-radius: 8px; overflow: hidden;
+}
+.leaflet-control-zoom-in, .leaflet-control-zoom-out {
+    width: 34px !important; height: 34px !important;
+    background-color: var(--primary-color) !important; color: white !important;
+    transition: background-color 0.2s ease-in-out !important;
+}
+.leaflet-control-zoom-in:hover, .leaflet-control-zoom-out:hover {
+    background-color: var(--primary-color-dark) !important;
+}
+.leaflet-control-zoom-in { border-bottom: 1px solid rgba(255,255,255,0.3) !important; }
+.leaflet-control-zoom-out { border-top: none !important; }
+.leaflet-control-zoom a {
+    line-height: 34px !important; font-size: 1.5em; font-weight: bold;
+    text-decoration: none; border-radius: 0 !important;
+}
