@@ -1,5 +1,3 @@
-import { markerRenderer } from '../map/markerRenderer.js'; // Якщо потрібно для кліку
-
 function formatDuration(ms) {
     if (ms < 1000) return "0 сек";
     const sec = Math.round(ms / 1000);
