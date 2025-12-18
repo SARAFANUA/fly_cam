@@ -21,7 +21,10 @@
     <link rel="stylesheet" href="css/modals.css">
     <link rel="stylesheet" href="css/tables.css">
 
-    <link rel="stylesheet" href="css/sidebar.css">
+    <link rel="stylesheet" href="css/sidebar-layout.css">
+    <link rel="stylesheet" href="css/sidebar-controls.css">
+    <link rel="stylesheet" href="css/sidebar-details.css">
+
     <link rel="stylesheet" href="css/map.css">
 </head>
 
@@ -33,7 +36,6 @@
         </div>
     </div>
 
-    <!-- LEFT SIDEBAR -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-content">
 
@@ -49,7 +51,6 @@
 
             <div class="sidebar-scrollable-content">
 
-                <!-- Верхні контролли (постійні) -->
                 <div class="map-controls" style="flex-direction: column; align-items: stretch; gap: 10px;">
 
                     <div style="display:flex; gap:10px; justify-content:space-between; flex-wrap:wrap;">
@@ -71,9 +72,7 @@
                         </div>
                     </div>
 
-                    <!-- Toolbar керування панелями: 2x2 порядок -->
                     <div class="filter-toolbar" id="filter-toolbar" title="Порада: затисніть Ctrl, щоб відкрити кілька панелей">
-                        <!-- Row 1 -->
                         <button class="filter-btn" id="btn-panel-details" data-panel="panel-details" title="Деталі (фіксації)">
                             <i class="fa-solid fa-list-ul"></i>
                             <span>Деталі</span>
@@ -84,7 +83,6 @@
                             <span>Дата</span>
                         </button>
 
-                        <!-- Row 2 -->
                         <button class="filter-btn" id="btn-panel-routes" data-panel="panel-routes" title="Завантажені маршрути">
                             <i class="fa-solid fa-route"></i>
                             <span>Маршрути</span>
@@ -97,10 +95,8 @@
                     </div>
                 </div>
 
-                <!-- Панелі -->
                 <div class="sidebar-panels" id="sidebar-panels">
 
-                    <!-- DETAILS -->
                     <section class="panel panel-soft hidden" id="panel-details">
                         <div class="panel-head">
                             <h3>Деталі: <span id="points-list-routename"></span></h3>
@@ -124,7 +120,6 @@
                         </div>
                     </section>
 
-                    <!-- DATES -->
                     <section class="panel panel-soft hidden" id="panel-dates">
                         <div class="panel-head">
                             <h3>Фільтр по даті</h3>
@@ -139,7 +134,6 @@
                         </div>
                     </section>
 
-                    <!-- ROUTES -->
                     <section class="panel panel-soft hidden" id="panel-routes">
                         <div class="panel-head">
                             <h3>Завантажені маршрути</h3>
@@ -154,7 +148,6 @@
                         </div>
                     </section>
 
-                    <!-- ANOMALIES -->
                     <section class="panel panel-soft hidden" id="panel-anomalies">
                         <div class="panel-head">
                             <h3>Поріг аномалій (затримка)</h3>
@@ -194,12 +187,10 @@
         </div>
     </div>
 
-    <!-- Left sidebar toggle -->
     <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="Сховати/Показати сайдбар">«</button>
 
     <div id="map"></div>
 
-    <!-- RIGHT SIDEBAR -->
     <div class="sidebar-right" id="sidebar-right">
         <button id="sidebar-right-toggle-btn" class="sidebar-toggle-btn right" title="Фільтри камер">
             <i class="fa-solid fa-video"></i>
@@ -214,7 +205,6 @@
         </div>
     </div>
 
-    <!-- Modal -->
     <div id="modal-container" class="modal-container hidden">
         <div id="modal-overlay" class="modal-overlay"></div>
 

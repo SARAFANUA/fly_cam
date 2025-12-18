@@ -1,5 +1,5 @@
 // js/ui/pointsListUI.js
-import { formatDuration } from './map/markerUtils.js';
+import { formatDuration } from '../map/markerUtils.js';
 
 export function clearPointsList(uiRefs) {
     uiRefs.routeTitle.textContent = '';

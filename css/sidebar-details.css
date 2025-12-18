@@ -1,0 +1,74 @@
+/* css/sidebar-details.css */
+
+/* =========================================
+   ПАНЕЛЬ ДЕТАЛЕЙ (Виправлення скролу)
+   ========================================= */
+
+/* 1. Робимо тіло панелі Flex-контейнером */
+#panel-details .panel-body {
+    padding: 0;
+    display: flex;            /* ✅ ВМИКАЄМО FLEX */
+    flex-direction: column;   /* ✅ Вертикальний стек */
+    height: 100%;             /* ✅ Займаємо всю висоту панелі */
+    overflow: hidden;         /* ✅ Ховаємо загальний скрол, щоб скролив список */
+}
+
+/* 2. Sticky Header (Заголовок таблиці) */
+/* Він має залишатися зверху і не стискатися */
+#panel-details #points-list-summary.sticky-summary {
+    margin: 0;
+    padding: 0;
+    background: var(--light-bg); /* Фон, щоб текст не просвічував при скролі */
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+    flex-shrink: 0;           /* ✅ Забороняємо стискання заголовка */
+    z-index: 10;
+}
+
+/* 3. Список точок (Таблиця) */
+/* Цей елемент має займати весь вільний простір і мати свій скрол */
+#panel-details #points-list-items {
+    flex-grow: 1;             /* ✅ Займає все місце, що залишилось */
+    overflow-y: auto;         /* ✅ Вмикаємо вертикальний скрол ТУТ */
+    min-height: 0;            /* ✅ Хак для Firefox/Flexbox */
+    display: block;
+}
+
+/* --- Стилі рядків таблиці (Sidebar Compact) --- */
+/* Перезапис стилів з tables.css для компактного вигляду в сайдбарі */
+#panel-details .points-grid-layout {
+    display: grid;
+    /* ID/# | TIME | PLAN | FACT | DIFF */
+    grid-template-columns: 50px 55px 1fr 1fr 90px; 
+    gap: 6px;
+    align-items: center;
+    padding: 8px 10px;
+}
+
+#panel-details .points-table-header {
+    font-size: 0.72em;
+    padding: 8px 10px; /* Трохи менші відступи */
+}
+
+#panel-details .point-list-row {
+    font-size: 0.85em;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+#panel-details .status-tag {
+    min-width: auto; /* Дозволяємо бейджам бути компактними */
+    padding: 2px 4px;
+    font-size: 0.8em;
+}
+
+/* --- Fallback для порожнього списку --- */
+.empty-list-item {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #888;
+    padding: 20px;
+    text-align: center;
+    font-style: italic;
+    height: 100%; /* Центрування по вертикалі */
+}

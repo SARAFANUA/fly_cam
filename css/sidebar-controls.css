@@ -1,0 +1,109 @@
+/* css/sidebar-controls.css */
+
+/* --- Група кластеризації --- */
+.clustering-group {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: linear-gradient(to bottom, var(--lighter-bg), var(--light-bg));
+    box-shadow: var(--shadow-sm);
+}
+.clustering-group #clustering-label { font-weight: 800; font-size: 0.95em; }
+
+/* Custom toggle inside clustering group */
+.clustering-group .toggle-switch{ position: relative; display: inline-flex; width: 52px; height: 28px; }
+.clustering-group .toggle-switch input{ opacity:0; width:0; height:0; }
+.clustering-group .toggle-switch .slider{
+    position:absolute; inset:0; border-radius: 999px; border: 1px solid var(--border-color);
+    background: #e2e8f0; transition: .2s ease;
+}
+.clustering-group .toggle-switch .slider:before{
+    content:""; position:absolute; height: 22px; width: 22px; left: 3px; top: 50%;
+    transform: translateY(-50%); border-radius: 999px; background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,.12); transition: .2s ease;
+}
+.clustering-group .toggle-switch input:checked + .slider{
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-light));
+    border-color: transparent;
+}
+.clustering-group .toggle-switch input:checked + .slider:before{
+    left: calc(100% - 3px); transform: translate(-100%, -50%);
+}
+
+/* --- Toolbar Фільтрів (2x2) --- */
+.filter-toolbar{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: "details dates" "routes  anomalies";
+    gap: 10px; padding-top: 6px; border-top: 1px solid var(--border-color);
+}
+.filter-btn{
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px 8px; border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: linear-gradient(to bottom, var(--lighter-bg), var(--light-bg));
+    cursor: pointer; user-select: none;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    box-shadow: var(--shadow-sm);
+    font-weight: 800; font-size: 0.92em; color: var(--text-primary);
+}
+.filter-btn i { font-size: 1.05em; opacity: 0.9; }
+.filter-btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow-md); border-color: rgba(37, 99, 235, 0.35); }
+.filter-btn.active{
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-light));
+    color: #fff; border-color: transparent;
+}
+.filter-btn.active i { opacity: 1; }
+
+.filter-toolbar .filter-btn[data-panel="panel-details"]   { grid-area: details; }
+.filter-toolbar .filter-btn[data-panel="panel-dates"]     { grid-area: dates; }
+.filter-toolbar .filter-btn[data-panel="panel-routes"]    { grid-area: routes; }
+.filter-toolbar .filter-btn[data-panel="panel-anomalies"] { grid-area: anomalies; }
+
+/* --- Списки (Маршрути та інше) --- */
+#route-items, #points-list-items, .date-filter-list {
+    list-style: none; padding: 0; margin: 0;
+}
+
+.file-list-item{
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px; border-bottom: 1px solid var(--border-color);
+    border-left: 4px solid transparent; transition: all var(--transition-fast);
+    background: var(--lighter-bg); overflow-x: hidden;
+}
+.file-list-item:hover { background: var(--light-bg); border-left-color: var(--primary-color-light); }
+.file-list-item.active{
+    background: linear-gradient(to right, rgba(37, 99, 235, 0.1), transparent);
+    border-left-color: var(--primary-color) !important; font-weight: 700;
+}
+.route-name{
+    cursor: pointer; flex-grow: 1; margin-right: 5px; color: var(--text-primary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95em;
+}
+.route-controls{ display: flex; align-items: center; gap: 4px; }
+.route-controls button{ background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 4px; }
+.remove-route-btn { color: #cc0000; font-weight: bold; }
+
+/* Date List */
+.date-filter-list li{
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--border-color);
+    font-size: 0.9em; background: var(--lighter-bg); transition: background 0.2s;
+}
+.date-filter-list li:hover { background: var(--light-bg); padding-left: 16px; }
+.date-filter-list li.active{
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-light)) !important;
+    color: white; font-weight: 700; padding-left: 16px;
+}
+.unique-date-count{
+    background-color: var(--light-bg); color: var(--text-secondary);
+    padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: 700;
+}
+
+/* Scrollbars */
+#route-items::-webkit-scrollbar, .date-filter-list::-webkit-scrollbar, .panel-body::-webkit-scrollbar { width: 8px; }
+#route-items::-webkit-scrollbar-thumb, .panel-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }

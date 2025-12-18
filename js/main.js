@@ -92,7 +92,7 @@ function bindPanelsUI() {
     });
 
     // default panel
-    if (activePanels.size === 0) activePanels.add('panel-details');
+    // if (activePanels.size === 0) activePanels.add('panel-details');
     syncPanelsUI();
 
     window.addEventListener('resize', () => syncPanelsUI());
