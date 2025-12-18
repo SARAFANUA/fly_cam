@@ -4,7 +4,6 @@ import * as markerRenderer from './map/markerRenderer.js';
 import * as cameraRenderer from './map/cameraRenderer.js';
 import { fetchCameras } from './api/camerasApi.js';
 import { initCameraPanel } from './ui/cameraPanel.js';
-import { anomalyService } from './services/anomalyService.js';
 
 import { store } from './state/store.js';
 import { getElements, showMessage } from './ui/dom.js';
@@ -15,7 +14,7 @@ import { sidebarUI } from './ui/sidebarUI.js';
 let map;
 
 async function updateApp() {
-    // Передаємо колбек handlePointMove у renderAll
+    // Повний рендер (використовується при завантаженні файлів, зміні фільтрів, видаленні маршрутів)
     await mapService.renderAll(store, handlePointMove);
     
     const ui = getElements();
@@ -40,17 +39,23 @@ async function updateApp() {
     updateDetails();
 }
 
-// Функція обробки переміщення точки (оновлює дані і перемальовує)
+// Обробник переміщення точки (оновлює тільки геометрію для швидкодії)
 async function handlePointMove(routeId, originalIndex, newLat, newLng) {
     const route = store.routes.get(routeId);
     if (!route) return;
 
+    // 1. Оновлюємо дані в Store
     if (route.normalizedPoints[originalIndex]) {
         route.normalizedPoints[originalIndex].latitude = newLat;
         route.normalizedPoints[originalIndex].longitude = newLng;
         
-        console.log(`Точку ${originalIndex + 1} оновлено. Перебудова маршруту...`);
-        await updateApp();
+        console.log(`Точку ${originalIndex + 1} оновлено. Перебудова геометрії...`);
+        
+        // 2. Часткове оновлення карти (тільки лінія)
+        await mapService.refreshRouteGeometry(store, routeId);
+
+        // 3. Оновлення деталей у сайдбарі
+        updateDetails(); 
     }
 }
 
@@ -77,17 +82,15 @@ function removeRoute(id) {
     updateApp();
 }
 
-// 1. ОНОВЛЕНА ФУНКЦІЯ ФІЛЬТРУ (Ctrl замість Shift)
+// Логіка вибору дат (Ctrl/Cmd замість Shift)
 function handleDateFilter(date, event) {
-    // Використовуємо ctrlKey (Windows/Linux) або metaKey (Command на Mac)
+    // Використовуємо ctrlKey (Windows/Linux) або metaKey (macOS Command)
     if (event.ctrlKey || event.metaKey) {
-        store.globalDateFilter.has(date) 
-            ? store.globalDateFilter.delete(date) 
-            : store.globalDateFilter.add(date);
+        store.globalDateFilter.has(date) ? store.globalDateFilter.delete(date) : store.globalDateFilter.add(date);
     } else {
-        // Звичайний клік - вибір однієї дати
+        // Звичайний клік - вибираємо одну дату, повторний клік - знімаємо виділення
         if (store.globalDateFilter.has(date) && store.globalDateFilter.size === 1) {
-            store.globalDateFilter.clear(); // Клік по активній - зняти виділення
+            store.globalDateFilter.clear();
         } else { 
             store.globalDateFilter.clear(); 
             store.globalDateFilter.add(date); 
@@ -95,6 +98,7 @@ function handleDateFilter(date, event) {
     }
     
     updateApp();
+    
     if (store.activeRouteId) {
         mapService.zoomToFiltered(store.routes.get(store.activeRouteId), store.globalDateFilter);
     }
@@ -112,27 +116,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const ui = getElements();
 
-    // 1. ЛІВИЙ САЙДБАР
     ui.sidebarToggleBtn.onclick = () => {
         ui.sidebar.classList.toggle('collapsed');
         setTimeout(() => map.invalidateSize(), 300);
     };
 
-    // 2. ПРАВИЙ САЙДБАР (Камери)
     const toggleRightSidebar = () => {
         const isOpen = ui.sidebarRight.classList.contains('open');
-        
         if (isOpen) {
-            // Закриваємо
             ui.sidebarRight.classList.remove('open');
             if(ui.sidebarRightToggleBtn) ui.sidebarRightToggleBtn.innerHTML = '<i class="fa-solid fa-video"></i>';
         } else {
-            // Відкриваємо
             ui.sidebarRight.classList.add('open');
             if(ui.sidebarRightToggleBtn) ui.sidebarRightToggleBtn.innerHTML = '»'; 
-            
-            // Якщо потрібно оновити камери при відкритті (опціонально)
-            // if (typeof window.reloadCameras === 'function') window.reloadCameras(currentFilters);
         }
     };
 
@@ -140,7 +136,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.sidebarRightToggleBtn.onclick = toggleRightSidebar;
     }
 
-    // Закриття правого сайдбару через хрестик всередині
     if (ui.closeCameraPanelBtn) {
         ui.closeCameraPanelBtn.onclick = () => {
             ui.sidebarRight.classList.remove('open');
@@ -148,7 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // 3. ФАЙЛИ (Кнопка + Input)
     if (ui.selectFilesBtn) {
         ui.selectFilesBtn.onclick = () => ui.fileInput.click();
     }
@@ -162,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.target.value = '';
     };
 
-    // 4. ГЛОБАЛЬНИЙ DRAG & DROP
+    // Drag & Drop
     const dropOverlay = document.getElementById('global-drop-overlay');
     let dragCounter = 0;
 
@@ -196,16 +190,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Локальна зона дропу (для сумісності)
     if(ui.dropArea) {
         ui.dropArea.ondragover = (e) => { e.preventDefault(); ui.dropArea.classList.add('highlight'); };
         ui.dropArea.ondragleave = () => ui.dropArea.classList.remove('highlight');
-        ui.dropArea.ondrop = async (e) => {
-            e.preventDefault(); ui.dropArea.classList.remove('highlight');
-        };
+        ui.dropArea.ondrop = async (e) => { e.preventDefault(); ui.dropArea.classList.remove('highlight'); };
     }
 
-    // 5. МОДАЛКА (Затемнення)
+    // Modal Overlay
     const overlay = ui.modalOverlay;
     const toggleOverlayBtn = document.getElementById('toggle-overlay-btn');
 
@@ -240,10 +231,8 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.modalOverlay.classList.remove('hidden');
     };
     
-    const close = () => ui.modalContainer.classList.add('hidden');
-    ui.closeModalBtn.onclick = close;
+    ui.closeModalBtn.onclick = () => ui.modalContainer.classList.add('hidden');
 
-    // Налаштування
     if(ui.toggleClustering) ui.toggleClustering.onchange = () => {
         store.isClusteringEnabled = ui.toggleClustering.checked;
         updateApp();
@@ -252,8 +241,28 @@ document.addEventListener('DOMContentLoaded', () => {
         store.vehicleType = ui.vehicleSelect.value;
         updateApp();
     };
+
+    // ✅ НОВЕ: Обробка налаштувань аномалій
+    const warnInput = document.getElementById('anomaly-warning-input');
+    const dangerInput = document.getElementById('anomaly-danger-input');
+
+    if (warnInput) {
+        warnInput.value = store.anomalyThresholds.warning;
+        warnInput.onchange = (e) => {
+            store.anomalyThresholds.warning = Number(e.target.value);
+            // Швидке оновлення аналітики без запитів до OSRM
+            mapService.updateAnalyticsOnly(store);
+        };
+    }
     
-    // Глобальна функція для камер (викликається з cameraPanel.js)
+    if (dangerInput) {
+        dangerInput.value = store.anomalyThresholds.danger;
+        dangerInput.onchange = (e) => {
+            store.anomalyThresholds.danger = Number(e.target.value);
+            mapService.updateAnalyticsOnly(store);
+        };
+    }
+    
     window.reloadCameras = async (filters, clusteringOverride = null) => {
         try {
             const data = await fetchCameras({ ...filters, limit: 10000 });
@@ -274,7 +283,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const suffix = filters.bbox ? ' (у видимій області)' : '';
                 hint.textContent = `Знайдено камер: ${items.length}${suffix}`;
             }
-            
         } catch (e) {
             console.error("Помилка завантаження камер:", e);
             showMessage("Не вдалося завантажити камери", "error");

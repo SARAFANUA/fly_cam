@@ -1,52 +1,42 @@
 // js/map/markerRenderer.js
-import { getRoute } from '../api/routingService.js';
-import { anomalyService } from '../services/anomalyService.js';
 
 let currentMapInstance;
 const renderedLayers = new Map();
 let highlightLayer = null;
-let currentlyHighlighted = null;
 
-// Налаштування кластеризації
 const markerClusterGroup = L.markerClusterGroup({
+    // ... (конфіг кластерів без змін)
     showCoverageOnHover: false,
     maxClusterRadius: 40,
     iconCreateFunction: function(cluster) {
         const count = cluster.getChildCount();
         let sizeClass = 'route-cluster-small';
-        let size = 35;
-
-        if (count > 50) {
-            sizeClass = 'route-cluster-large';
-            size = 50;
-        } else if (count > 10) {
-            sizeClass = 'route-cluster-medium';
-            size = 42;
-        }
+        if (count > 50) sizeClass = 'route-cluster-large';
+        else if (count > 10) sizeClass = 'route-cluster-medium';
 
         return L.divIcon({
             html: `<span>${count}</span>`,
             className: `route-cluster ${sizeClass}`,
-            iconSize: L.point(size, size)
+            iconSize: L.point(40, 40)
         });
     }
 });
 
 let nonClusteredMarkersLayer = L.layerGroup(); 
 
-// Допоміжна функція для пошуку індексу точки на лінії
 function findClosestPointIndex(targetPoint, geometry) {
-    let closestIndex = -1;
-    let minDistance = Infinity;
-    geometry.forEach((coords, index) => {
-        const point = L.latLng(coords[0], coords[1]);
-        const distance = targetPoint.distanceTo(point);
-        if (distance < minDistance) {
-            minDistance = distance;
-            closestIndex = index;
-        }
-    });
-    return closestIndex;
+     if (!geometry || !Array.isArray(geometry)) return -1;
+     let closestIndex = -1;
+     let minDistance = Infinity;
+     geometry.forEach((coords, index) => {
+         const point = L.latLng(coords[0], coords[1]);
+         const distance = targetPoint.distanceTo(point);
+         if (distance < minDistance) {
+             minDistance = distance;
+             closestIndex = index;
+         }
+     });
+     return closestIndex;
 }
 
 export function setMapInstance(map) {
@@ -55,27 +45,19 @@ export function setMapInstance(map) {
     currentMapInstance.addLayer(nonClusteredMarkersLayer);
 }
 
-// Функція створення іконки (Старт/Фініш/Аномалії)
+// ✅ Використовуємо класи CSS map.css
 function createMarkerIcon(index, totalCount, isAnomaly) {
     let typeClass = '';
     let text = (index + 1).toString();
     
-    // 1. Старт
     if (index === 0) {
-        typeClass = 'marker-start';
-        text = 'S';
-    } 
-    // 2. Фініш
-    else if (index === totalCount - 1) {
-        typeClass = 'marker-finish';
-        text = 'F';
-    } 
-    // 3. Аномалії
-    else if (isAnomaly === 'high') {
-        typeClass = 'marker-danger';
-    } 
-    else if (isAnomaly === 'medium') {
-        typeClass = 'marker-warning';
+        typeClass = 'marker-start'; text = 'S';
+    } else if (index === totalCount - 1) {
+        typeClass = 'marker-finish'; text = 'F';
+    } else if (isAnomaly === 'high') {
+        typeClass = 'marker-danger'; // Червоний
+    } else if (isAnomaly === 'medium') {
+        typeClass = 'marker-warning'; // Жовтий
     }
 
     return L.divIcon({
@@ -87,185 +69,143 @@ function createMarkerIcon(index, totalCount, isAnomaly) {
     });
 }
 
-// ГОЛОВНА ФУНКЦІЯ РЕНДЕРУ
-export async function renderMarkers(route, map, routeColor, isClusteringEnabled, dateFilter = new Set(), renderOrder = { index: 0, total: 1 }, vehicleType = 'car', onPointMove = null) {
-    if (!route || !route.normalizedPoints || route.normalizedPoints.length === 0) {
-        return;
-    }
+function formatDuration(sec) {
+    if(!sec) return '0с';
+    const m = Math.floor(Math.abs(sec) / 60);
+    const s = Math.floor(Math.abs(sec) % 60);
+    return (sec < 0 ? '-' : '') + (m > 0 ? `${m}хв ` : '') + `${s}с`;
+}
+
+export async function renderMarkers(route, map, routeColor, isClusteringEnabled, dateFilter, renderOrder, onPointMove) {
+    if (!route || !route.normalizedPoints) return;
 
     clearRouteLayers(route.id);
     
-    // 1. Фільтрація точок
+    // Фільтрація
     let pointsToRender = route.normalizedPoints;
-
-    if (dateFilter.size > 0 && !route.isLocked) {
+    if (dateFilter && dateFilter.size > 0 && !route.isLocked) {
         pointsToRender = route.normalizedPoints.filter(p => {
-            const pointDate = new Date(p.timestamp).toLocaleDateString('uk-UA');
-            return dateFilter.has(pointDate);
+            return dateFilter.has(new Date(p.timestamp).toLocaleDateString('uk-UA'));
         });
     }
+    if (pointsToRender.length === 0) return;
 
-    if (pointsToRender.length === 0) {
-        return;
-    }
-
-    // 2. Отримання маршруту та Аналіз аномалій
-    // Ми робимо це ДО створення маркерів, щоб знати, які маркери фарбувати
-    let routeGeometry = null; // Геометрія для малювання лінії
-    
-    if (pointsToRender.length > 1) {
-        const coords = pointsToRender.map(p => [p.latitude, p.longitude]);
-        
-        // Отримуємо об'єкт { geometry, legs, duration, distance }
-        const routeData = await getRoute(coords, vehicleType);
-        
-        if (routeData) {
-            routeGeometry = routeData.geometry || coords; // Фолбек на прямі лінії
-            
-            // Якщо є сегменти (legs), запускаємо аналіз
-            if (routeData.legs && routeData.legs.length > 0) {
-                // Ця функція поверне новий масив точок з доданим полем anomalyLevel
-                pointsToRender = anomalyService.analyzeRoute(pointsToRender, routeData.legs);
-            }
-        }
-    }
-
-    // 3. Створення маркерів (вже з даними про аномалії)
     const markers = [];
     
     pointsToRender.forEach((point, displayIndex) => {
         const originalIndex = route.normalizedPoints.indexOf(point);
+        // ✅ Читаємо розрахований рівень аномалії
         const isAnomaly = point.anomalyLevel || null;
-
+        
         const icon = createMarkerIcon(displayIndex, pointsToRender.length, isAnomaly);
         
         const marker = L.marker([point.latitude, point.longitude], { 
             icon: icon, 
-            draggable: true, 
+            draggable: true,
             originalIndex: originalIndex 
         });
 
-        // Попап з деталями
+        // ✅ Розширений попап
         const timeStr = new Date(point.timestamp).toLocaleString('uk-UA');
-        let popupContent = `<b>Точка №${displayIndex + 1}</b><br>${timeStr}`;
-        
-        // Якщо є аналіз затримки
-        if (point.analysis && point.analysis.delay > 60) {
-             const delayStr = anomalyService.formatDelay(point.analysis.delay);
-             const colorStyle = isAnomaly === 'high' ? 'color:#b91c1c;font-weight:bold' : (isAnomaly === 'medium' ? 'color:#d97706;font-weight:bold' : '');
-             popupContent += `<br><span style="${colorStyle}">⚠️ Затримка: ${delayStr}</span>`;
-             popupContent += `<hr style="margin:5px 0; opacity:0.3">`;
-             popupContent += `<small>Очікувано: ${(point.analysis.expected/60).toFixed(1)} хв</small><br>`;
-             popupContent += `<small>Фактично: ${(point.analysis.fact/60).toFixed(1)} хв</small>`;
+        let popupContent = `
+            <div style="font-size:1.1em; margin-bottom:5px;"><b>Точка №${displayIndex + 1}</b></div>
+            <div><i class="fa-regular fa-clock"></i> ${timeStr}</div>
+        `;
+
+        if (point.timingInfo) {
+            const { expected, actual, diff, percent } = point.timingInfo;
+            const color = percent > 0 ? 'red' : 'green';
+            const sign = percent > 0 ? '+' : '';
+            
+            popupContent += `
+                <hr style="margin:5px 0; border:0; border-top:1px solid #ccc;">
+                <div style="display:grid; grid-template-columns: 1fr auto; gap:5px; font-size:0.95em;">
+                    <span>Очікувано (OSRM):</span> <b>${formatDuration(expected)}</b>
+                    <span>Фактично:</span> <b>${formatDuration(actual)}</b>
+                    <span>Різниця:</span> <b style="color:${color}">${sign}${formatDuration(diff)}</b>
+                    <span>Відхилення:</span> <b style="color:${color}">${sign}${percent}%</b>
+                </div>
+            `;
         }
 
-        // Додаткові дані з файлу
         if (point.originalData) {
-            popupContent += `<hr style="margin:5px 0; opacity:0.3"><ul>`;
+            popupContent += `<hr style="margin:5px 0;"><div style="font-size:0.85em; color:#666;">`;
             for (const key in point.originalData) {
-                popupContent += `<li><strong>${key}:</strong> ${point.originalData[key]}</li>`;
+                popupContent += `<div>${key}: ${point.originalData[key]}</div>`;
             }
-            popupContent += `</ul>`;
+            popupContent += `</div>`;
         }
 
         marker.bindPopup(popupContent);
 
-        // Drag & Drop
         marker.on('dragend', (e) => {
             const newPos = e.target.getLatLng();
-            if (onPointMove) {
-                onPointMove(route.id, originalIndex, newPos.lat, newPos.lng);
-            }
+            if (onPointMove) onPointMove(route.id, originalIndex, newPos.lat, newPos.lng);
         });
 
         markers.push(marker);
     });
 
-    // 4. Додавання маркерів на шар
     if (isClusteringEnabled) {
         markerClusterGroup.addLayers(markers);
     } else {
         markers.forEach(marker => nonClusteredMarkersLayer.addLayer(marker));
     }
     
-    // 5. Малювання лінії
+    // Малювання лінії (беремо з кешу OSRM, якщо є)
     let polyline = null;
-    if (routeGeometry && routeGeometry.length > 0) {
+    if (pointsToRender.length > 1) {
+        // Якщо OSRM координати є і ми не фільтруємо (бо фільтр ламає цілісність лінії OSRM), використовуємо їх
+        // Якщо фільтр активний - малюємо прямі лінії між видимими точками
+        let geometry = [];
+        
+        const isFiltered = (dateFilter && dateFilter.size > 0 && !route.isLocked);
+        
+        if (!isFiltered && route.osrmCoordinates && route.osrmCoordinates.length > 0) {
+            geometry = route.osrmCoordinates;
+        } else {
+            // Прямі лінії
+            geometry = pointsToRender.map(p => [p.latitude, p.longitude]);
+        }
+
         const maxWeight = 12;
         const minWeight = 4;
         const weightStep = (maxWeight - minWeight) / (renderOrder.total || 1);
         const weight = maxWeight - (renderOrder.index * weightStep);
 
-        polyline = L.polyline(routeGeometry, { 
+        polyline = L.polyline(geometry, { 
             color: routeColor, 
             weight: weight, 
             opacity: 0.85 
         }).addTo(map);
         
-        // Індексація для хайлайту
-        const pointIndexMap = pointsToRender.map(p => findClosestPointIndex(L.latLng(p.latitude, p.longitude), routeGeometry));
-        polyline.options.fullGeometry = routeGeometry;
-        polyline.options.pointIndexMap = pointIndexMap;
+        polyline.options.fullGeometry = geometry;
     }
 
-    // Збереження шарів
-    renderedLayers.set(route.id, { markers, polyline, originalPoints: route.normalizedPoints, filteredPoints: pointsToRender });
+    renderedLayers.set(route.id, { markers, polyline });
 }
 
-function resetHighlight() {
-    if (highlightLayer) {
-        currentMapInstance.removeLayer(highlightLayer);
-        highlightLayer = null;
-    }
-    renderedLayers.forEach(layers => {
-        if (layers.polyline) {
-            layers.polyline.setStyle({ opacity: 0.85 });
-        }
-    });
-    currentlyHighlighted = null;
-}
-
+// ... (clearRouteLayers, clearAllMarkers, highlightSegment без суттєвих змін) ...
 export function highlightSegment(routeId, originalIndex) {
     const layers = renderedLayers.get(routeId);
     if (!layers || !layers.markers) return;
-
     const marker = layers.markers.find(m => m.options.originalIndex === originalIndex);
-    
     if (marker) {
-        if (markerClusterGroup.hasLayer(marker)) {
-            markerClusterGroup.zoomToShowLayer(marker, () => {
-                marker.openPopup();
-            });
-        } else {
-            currentMapInstance.setView(marker.getLatLng(), 15);
-            marker.openPopup();
-        }
+        if (markerClusterGroup.hasLayer(marker)) markerClusterGroup.zoomToShowLayer(marker, () => marker.openPopup());
+        else { currentMapInstance.setView(marker.getLatLng(), 15); marker.openPopup(); }
     }
 }
-
 export function clearRouteLayers(routeId) {
     if (renderedLayers.has(routeId)) {
         const layers = renderedLayers.get(routeId);
-        if (layers.markers) {
-            layers.markers.forEach(marker => {
-                markerClusterGroup.removeLayer(marker);
-                nonClusteredMarkersLayer.removeLayer(marker);
-            });
-        }
+        if (layers.markers) layers.markers.forEach(m => { markerClusterGroup.removeLayer(m); nonClusteredMarkersLayer.removeLayer(m); });
         if (layers.polyline) currentMapInstance?.removeLayer(layers.polyline);
         renderedLayers.delete(routeId);
     }
-    resetHighlight();
 }
-
 export function clearAllMarkers() {
     markerClusterGroup.clearLayers();
     nonClusteredMarkersLayer.clearLayers();
-
-    for (const routeId of renderedLayers.keys()) {
-        const layers = renderedLayers.get(routeId);
-        if (layers.polyline) currentMapInstance?.removeLayer(layers.polyline);
-    }
+    for (const layers of renderedLayers.values()) if (layers.polyline) currentMapInstance?.removeLayer(layers.polyline);
     renderedLayers.clear();
-    resetHighlight();
 }
