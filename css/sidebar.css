@@ -1,4 +1,10 @@
-/* --- Каркас сайдбару --- */
+/* css/sidebar.css */
+
+/* =========================================
+   ЛІВИЙ САЙДБАР (Основний)
+   ========================================= */
+
+/* --- Каркас --- */
 .sidebar {
     width: var(--sidebar-width);
     background-color: var(--lighter-bg);
@@ -13,10 +19,13 @@
 
 .sidebar-content {
     display: flex; flex-direction: column;
-    height: 100%; padding: 20px;
+    height: 100%; 
+    padding: 15px; /* Оптимізовано: 15px замість 20px для економії місця */
     box-sizing: border-box; width: 100%; overflow-x: hidden;
+    pointer-events: auto;
 }
 
+/* Кнопка перемикання ЛІВОГО сайдбару */
 .sidebar-toggle-btn {
     position: absolute; top: 50%; left: var(--sidebar-width);
     transform: translateY(-50%);
@@ -33,23 +42,34 @@
     width: 28px; box-shadow: var(--shadow-lg);
 }
 
-/* --- Вміст --- */
+/* --- Вміст (Заголовки та скрол) --- */
 .sidebar-header, .sidebar-footer { flex-shrink: 0; }
+
 .sidebar-scrollable-content {
-    flex-grow: 1; display: flex; flex-direction: column;
-    gap: 15px; margin: 10px 0; min-height: 0;
-    overflow-y: auto; overflow-x: hidden; padding-right: 5px;
+    flex-grow: 1; 
+    display: flex; 
+    flex-direction: column;
+    gap: 12px; /* Оптимізовано відступ */
+    margin: 10px 0; 
+    min-height: 0; /* Критично для скролу всередині Flex */
+    overflow-y: auto; 
+    overflow-x: hidden; 
+    padding-right: 5px;
 }
 
 .sidebar h1 {
-    margin-top: 0; margin-bottom: 15px; text-align: center;
-    font-size: 1.75em; font-weight: 700;
+    margin-top: 0; margin-bottom: 12px; text-align: center;
+    font-size: 1.6em; font-weight: 700;
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color-light) 100%);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     letter-spacing: -0.02em;
 }
 
-/* --- Контейнери списків --- */
+/* =========================================
+   СПИСКИ ТА КОНТЕЙНЕРИ
+   ========================================= */
+
+/* --- Контейнери (рамки) --- */
 #file-list-container, #points-list-container, .filter-section {
     border: 1px solid var(--border-color);
     border-radius: 12px;
@@ -61,24 +81,35 @@
 }
 #file-list-container:hover, #points-list-container:hover { box-shadow: var(--shadow-md); }
 
+/* Заголовки блоків */
 #file-list-container h3, .points-list-header h3, .filter-section h3 {
-    margin: 0; padding: 12px 16px;
-    font-size: 1.05em; font-weight: 600;
+    margin: 0; padding: 10px 14px;
+    font-size: 1em; font-weight: 600;
     color: var(--text-primary);
     background: linear-gradient(to bottom, var(--lighter-bg), var(--light-bg));
-    border-bottom: 2px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .filter-section h3 i { color: var(--primary-color); margin-right: 8px; }
 
-/* --- Елементи списків (маршрути) --- */
+/* --- Списки (ul) --- */
 #route-items, #points-list-items {
     list-style: none; padding: 0; margin: 0;
-    overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; min-height: 0;
+    overflow-y: auto; 
+    flex-grow: 1; 
+    display: flex; 
+    flex-direction: column; 
+    min-height: 50px; 
 }
+
+/* Обмеження висоти списків */
+#points-list-items { max-height: 25vh; } 
+.date-filter-list { max-height: 20vh; overflow-y: auto; list-style: none; padding:0; margin:0;}
+
+/* Елемент списку файлів */
 .file-list-item {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 14px; border-bottom: 1px solid var(--border-color);
+    padding: 8px 12px; border-bottom: 1px solid var(--border-color);
     border-left: 4px solid transparent; transition: all var(--transition-fast);
     background: var(--lighter-bg); overflow-x: hidden; min-width: 0;
 }
@@ -93,79 +124,118 @@
 .route-name {
     cursor: pointer; flex-grow: 1; margin-right: 5px; color: var(--text-primary);
     flex-shrink: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+    font-size: 0.95em;
 }
-.route-controls { display: flex; align-items: center; white-space: nowrap; flex-shrink: 0; }
+.route-controls { display: flex; align-items: center; white-space: nowrap; flex-shrink: 0; gap: 4px; }
 .route-controls button {
-    background: none; border: none; cursor: pointer; font-size: 16px;
-    padding: 2px 5px; line-height: 1;
+    background: none; border: none; cursor: pointer; font-size: 14px;
+    padding: 2px 4px; line-height: 1;
 }
 .toggle-visibility-btn { opacity: 0.7; }
 .remove-route-btn { color: #cc0000; font-weight: bold; }
 
-/* --- Точки --- */
+/* --- Елементи списку точок --- */
 .points-list-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
 .sticky-summary {
-    padding: 10px 15px; position: sticky; top: 0;
+    padding: 8px 12px; position: sticky; top: 0;
     background-color: var(--light-bg); z-index: 10;
-    font-size: 0.9em; color: #555; border-bottom: 1px solid var(--border-color); flex-shrink: 0;
+    font-size: 0.85em; color: #555; border-bottom: 1px solid var(--border-color); flex-shrink: 0;
 }
-#points-list-items { max-height: 210px; }
+
 #points-list-items li:not(.empty-list-item) {
-    display: grid; grid-template-columns: 40px 1fr auto; gap: 15px;
-    align-items: center; padding: 8px 12px; border-bottom: 1px solid #eee;
+    display: grid; grid-template-columns: 35px 1fr auto; gap: 10px;
+    align-items: center; padding: 6px 10px; border-bottom: 1px solid #eee;
+    font-size: 0.9em;
 }
 #points-list-items li:hover { background-color: #f0f8ff; cursor: pointer; }
 
-.point-index { color: #888; text-align: right; }
-.point-duration { text-align: right; font-variant-numeric: tabular-nums; }
-.point-duration.long-stop { color: var(--danger-color); background-color: #f2dede; padding: 2px 5px; border-radius: 3px; }
-.empty-list-item { display: flex; justify-content: center; align-items: center; color: #888; padding: 20px; text-align: center; }
+.point-index { color: #888; text-align: right; font-size: 0.85em; }
+.point-duration { text-align: right; font-variant-numeric: tabular-nums; font-size: 0.85em; }
+.point-duration.long-stop { color: var(--danger-color); background-color: #f2dede; padding: 1px 4px; border-radius: 3px; }
+.empty-list-item { display: flex; justify-content: center; align-items: center; color: #888; padding: 15px; text-align: center; font-size: 0.9em; }
 
-/* --- Фільтр дат та інфо --- */
-.date-filter-list { list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; }
+/* --- Фільтр дат --- */
 .date-filter-list li {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 16px; cursor: pointer; border-bottom: 1px solid var(--border-color);
+    padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--border-color);
     font-size: 0.9em; transition: all var(--transition-fast); background: var(--lighter-bg);
 }
-.date-filter-list li:hover { background: var(--light-bg); padding-left: 20px; }
+.date-filter-list li:hover { background: var(--light-bg); padding-left: 16px; }
 .date-filter-list li.active {
     background: linear-gradient(135deg, var(--primary-color), var(--primary-color-light)) !important;
-    color: white; font-weight: 600; padding-left: 20px;
+    color: white; font-weight: 600; padding-left: 16px;
 }
 .unique-date-count {
     background-color: var(--light-bg); color: var(--text-secondary);
-    padding: 4px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 600;
+    padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: 600;
 }
 
 .developer-info {
-    font-size: 0.8em; color: var(--text-secondary); text-align: center;
-    padding: 12px 16px; margin: 12px 0 0 0; border-top: 1px solid var(--border-color);
+    font-size: 0.75em; color: var(--text-secondary); text-align: center;
+    padding: 10px 0 0 0; margin: 10px 0 0 0; border-top: 1px solid var(--border-color);
     flex-shrink: 0; background: linear-gradient(to top, var(--light-bg), transparent);
 }
 .developer-info i { color: var(--primary-color); margin-right: 6px; }
 
-/* --- НОВІ СТИЛІ: Правий сайдбар --- */
+
+/* =========================================
+   ПРАВИЙ САЙДБАР (Виправлено)
+   ========================================= */
+
 .sidebar-right {
     position: absolute;
-    top: 0;
+    top: 0; 
     right: 0;
-    width: 380px;
+    width: 380px; 
     height: 100%;
     background-color: var(--lighter-bg);
     box-shadow: -2px 0 10px rgba(0,0,0,0.1);
     z-index: 1002;
-    transform: translateX(100%);
+    transform: translateX(100%); /* Сховано за екран */
     transition: transform 0.3s ease-in-out;
+    
+    /* ВАЖЛИВО: дозволяє кнопці "стирчати" назовні зліва */
+    overflow: visible !important; 
+    
     display: flex; 
     flex-direction: column;
+
+    /* ВАЖЛИВО: Щоб прозорий контейнер не блокував кліки по карті, коли закритий */
+    pointer-events: none; 
 }
 
+/* Коли відкрито - блок знову реагує на мишку */
 .sidebar-right.open {
     transform: translateX(0);
+    pointer-events: auto;
 }
 
 .sidebar-right .close-btn {
     background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary);
+    pointer-events: auto; /* Хрестик має бути клікабельним */
 }
 .sidebar-right .close-btn:hover { color: var(--danger-color); }
+
+/* --- Кнопка перемикання ПРАВОГО сайдбару --- */
+.sidebar-toggle-btn.right {
+    position: absolute;
+    top: 50%;
+    
+    /* Притискаємо до лівого краю сайдбару ЗЗОВНІ (на 100% ширини кнопки вліво) */
+    right: 100%; 
+    left: auto;  /* Скасовуємо left, який йде від звичайної кнопки */
+    
+    border-radius: 8px 0 0 8px; /* Заокруглення зліва */
+    box-shadow: -4px 0 6px -2px rgba(0,0,0,0.1); /* Тінь вліво */
+    
+    width: 24px;
+    z-index: 1005; /* Поверх всього */
+    
+    /* ВАЖЛИВО: Кнопка повинна бути клікабельна завжди, навіть якщо батько pointer-events: none */
+    pointer-events: auto; 
+    cursor: pointer;
+}
+
+.sidebar-toggle-btn.right:hover {
+    width: 30px; /* Розширення вліво при наведенні */
+}

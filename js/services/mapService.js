@@ -1,3 +1,4 @@
+// js/services/mapService.js
 import * as markerRenderer from '../map/markerRenderer.js';
 import * as colorUtils from '../utils/colorUtils.js';
 
@@ -9,7 +10,8 @@ export const mapService = {
         markerRenderer.setMapInstance(mapInstance);
     },
 
-    async renderAll(store) {
+    // Додано аргумент onPointMove
+    async renderAll(store, onPointMove) {
         markerRenderer.clearAllMarkers();
         store.routeColorMap.clear();
 
@@ -22,11 +24,14 @@ export const mapService = {
 
             if (route.isVisible) {
                 await markerRenderer.renderMarkers(
-                    route, this.map, color, 
+                    route, 
+                    this.map, 
+                    color, 
                     store.isClusteringEnabled, 
                     store.globalDateFilter, 
                     { index, total: visibleRoutes.length }, 
-                    store.vehicleType
+                    store.vehicleType,
+                    onPointMove // <-- Передаємо далі
                 );
                 index++;
             }

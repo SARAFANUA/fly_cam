@@ -265,3 +265,125 @@
     top: -60px;
     overflow: visible;
 }
+
+/* css/map.css */
+
+/* --- Маркери МАРШРУТУ (Оновлено) --- */
+.custom-marker-icon {
+    position: relative; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    transition: transform 0.1s;
+}
+.custom-marker-icon:hover {
+    z-index: 1000 !important;
+    transform: scale(1.1);
+}
+
+.custom-marker-icon .marker-pin {
+    width: 30px; height: 30px; border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg); border: 2px solid white;
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    background-color: #3b82f6; /* Стандартний синій */
+}
+
+/* Цифра всередині (повертаємо назад) */
+.custom-marker-icon .marker-number {
+    position: absolute; 
+    top: 50%; left: 50%;
+    transform: translate(-50%, -85%);
+    color: white;
+    font-size: 11px; font-weight: 800; text-align: center;
+    pointer-events: none;
+}
+
+/* --- Старт / Фініш / Аномалії --- */
+
+/* Старт (Зелений) */
+.marker-start .marker-pin {
+    background-color: #10b981 !important; /* Emerald */
+    width: 34px; height: 34px;
+    z-index: 10;
+}
+.marker-start .marker-number { font-size: 14px; } /* S */
+
+/* Фініш (Червоний) */
+.marker-finish .marker-pin {
+    background-color: #ef4444 !important; /* Red */
+    width: 34px; height: 34px;
+    z-index: 10;
+}
+.marker-finish .marker-number { font-size: 14px; } /* F */
+
+/* Аномалія: Увага (Жовтий) */
+.marker-warning .marker-pin {
+    background-color: #f59e0b !important; /* Amber */
+}
+.marker-warning .marker-number { color: #fff; text-shadow: 0 0 2px rgba(0,0,0,0.5); }
+
+/* Аномалія: Критично (Темно-червоний + Пульсація) */
+.marker-danger .marker-pin {
+    background-color: #b91c1c !important; /* Red-700 */
+    border-color: #fecaca;
+    animation: pulse-danger 2s infinite;
+}
+
+@keyframes pulse-danger {
+    0% { box-shadow: 0 0 0 0 rgba(185, 28, 28, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(185, 28, 28, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(185, 28, 28, 0); }
+}
+
+/* --- Кластери МАРШРУТУ (Route) --- */
+.route-cluster {
+    background-clip: padding-box;
+    border-radius: 50%;
+    text-align: center;
+    color: white;
+    font-weight: bold;
+    font-family: sans-serif;
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    display: flex !important; justify-content: center; align-items: center;
+}
+.route-cluster-small { background-color: rgba(110, 204, 57, 0.85); }
+.route-cluster-medium { background-color: rgba(240, 194, 12, 0.85); }
+.route-cluster-large { background-color: rgba(241, 128, 23, 0.85); }
+
+/* --- Кластери КАМЕР (Camera) --- */
+/* Стилі з попередніх етапів (монохромні) */
+.custom-cluster {
+    background: transparent;
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+}
+.custom-cluster .cluster-content {
+    width: 100%; height: 100%; border-radius: 50%;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    color: white; z-index: 2; border: 3px solid #ffffff; 
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s ease;
+}
+.custom-cluster:hover .cluster-content { transform: scale(1.1); box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); z-index: 10; }
+.cluster-icon { font-size: 14px; margin-bottom: 2px; opacity: 0.9; }
+.cluster-count { font-weight: 700; font-size: 13px; line-height: 1; }
+
+.cluster-small .cluster-content { background-color: #64748b; }
+.cluster-district .cluster-content { background-color: #2563eb; }
+.cluster-region .cluster-content { background-color: #1e3a8a; }
+.cluster-region .cluster-count { font-size: 15px; }
+.cluster-region .cluster-icon { font-size: 18px; }
+
+/* FoV */
+.camera-combined-icon { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: visible; }
+.camera-marker-body { width: 30px; height: 30px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; z-index: 10; position: relative; }
+.camera-fov-container { position: absolute; top: 50%; left: 50%; width: 0; height: 0; z-index: 1; pointer-events: none; opacity: 0; transition: opacity 0.3s ease-in-out; }
+.map-show-fov .camera-fov-container { opacity: 1; }
+.camera-fov-container svg { position: absolute; left: -60px; top: -60px; overflow: visible; }
+
+/* Інші стилі контролів карти залишаються... */
+.map-controls { display: flex; justify-content: flex-start; align-items: center; gap: 16px; padding: 12px 16px; flex-wrap: wrap; width: 100%; box-sizing: border-box; flex-shrink: 0; overflow-x: hidden; background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(59, 130, 246, 0.05)); border-radius: 12px; border: 1px solid var(--border-color); }
+.map-controls-group { display: flex; align-items: center; gap: 8px; flex-shrink: 1; }
+.clustering-group #clustering-label { margin-right: 5px; }
+.map-controls span, .map-controls label { font-weight: 600; font-size: 0.95em; color: var(--text-primary); display: block; margin-bottom: 0; white-space: nowrap; }
+.map-controls-group select { padding: 4px 8px; border-radius: 5px; border: 1px solid #ccc; background-color: white; font-size: 0.9em; cursor: pointer; transition: border-color 0.2s; flex-shrink: 1; min-width: 120px; width: 100%; }

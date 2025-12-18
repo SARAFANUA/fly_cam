@@ -1,12 +1,13 @@
 // js/ui/dom.js
 
-// Ледачий гетер (lazy getter) для елементів
 export const getElements = () => ({
-    // Лівий сайдбар
     sidebar: document.getElementById('sidebar'),
     sidebarToggleBtn: document.getElementById('sidebar-toggle-btn'),
+    
     dropArea: document.getElementById('drop-area'),
     fileInput: document.getElementById('file-input'),
+    selectFilesBtn: document.getElementById('select-files-btn'), // <-- НОВЕ
+    
     routeList: document.getElementById('route-items'),
     message: document.getElementById('message'),
     
@@ -27,18 +28,19 @@ export const getElements = () => ({
     // Controls
     toggleClustering: document.getElementById('toggle-clustering-btn'),
     vehicleSelect: document.getElementById('vehicle-type-select'),
+    toggleOverlay: document.getElementById('toggle-overlay-btn'),
     resizer: document.getElementById('resizer'),
 
-    // --- НОВЕ: Правий сайдбар (Камери) ---
+    // Camera Panel elements (якщо треба, вони вже є в cameraPanel.js, але можна і тут)
     sidebarRight: document.getElementById('sidebar-right'),
-    openCameraPanelBtn: document.getElementById('open-camera-panel-btn'),
+    sidebarRightToggleBtn: document.getElementById('sidebar-right-toggle-btn'),
     closeCameraPanelBtn: document.getElementById('close-right-sidebar-btn'),
     cameraFiltersContainer: document.getElementById('camera-filters-container')
 });
 
-// Утиліта для повідомлень
 export function showMessage(msg, type, onReset) {
     const el = getElements().message;
+    if (!el) return;
     el.innerHTML = `<span>${msg}</span>`;
     el.className = `message ${type}`;
 

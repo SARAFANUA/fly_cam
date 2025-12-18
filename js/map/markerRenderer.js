@@ -8,7 +8,7 @@ let currentlyHighlighted = null;
 
 const markerClusterGroup = L.markerClusterGroup({
     showCoverageOnHover: false,
-    maxClusterRadius: 50,
+    maxClusterRadius: 40,
     iconCreateFunction: function(cluster) {
         const count = cluster.getChildCount();
         let sizeClass = 'route-cluster-small';
@@ -52,127 +52,139 @@ export function setMapInstance(map) {
     currentMapInstance.addLayer(nonClusteredMarkersLayer);
 }
 
-export async function renderMarkers(route, map, routeColor, isClusteringEnabled, dateFilter = new Set(), renderOrder = { index: 0, total: 1 }, vehicleType = 'car') {
+// Функція створення іконки маркера з урахуванням типу (Старт/Фініш/Аномалія)
+function createMarkerIcon(index, totalCount, isAnomaly) {
+    let typeClass = '';
+    let text = (index + 1).toString();
+    
+    // 1. Старт (перша точка)
+    if (index === 0) {
+        typeClass = 'marker-start';
+        text = 'S';
+    } 
+    // 2. Фініш (остання точка)
+    else if (index === totalCount - 1) {
+        typeClass = 'marker-finish';
+        text = 'F';
+    } 
+    // 3. Аномалії
+    else if (isAnomaly === 'high') {
+        typeClass = 'marker-danger';
+    } 
+    else if (isAnomaly === 'medium') {
+        typeClass = 'marker-warning';
+    }
+
+    return L.divIcon({
+        className: `custom-marker-icon ${typeClass}`,
+        html: `<div class="marker-pin"></div><div class="marker-number">${text}</div>`,
+        iconSize: [30, 42],
+        iconAnchor: [15, 42],
+        popupAnchor: [0, -40]
+    });
+}
+
+// ОНОВЛЕНА ФУНКЦІЯ: додано параметр onPointMove
+export async function renderMarkers(route, map, routeColor, isClusteringEnabled, dateFilter = new Set(), renderOrder = { index: 0, total: 1 }, vehicleType = 'car', onPointMove = null) {
     if (!route || !route.normalizedPoints || route.normalizedPoints.length === 0) {
         return;
     }
 
     clearRouteLayers(route.id);
     
-    let pointsForMarkers = route.normalizedPoints;
+    // 1. Фільтрація точок
+    let pointsToRender = route.normalizedPoints;
 
     if (dateFilter.size > 0 && !route.isLocked) {
-        pointsForMarkers = route.normalizedPoints.filter(p => {
+        pointsToRender = route.normalizedPoints.filter(p => {
             const pointDate = new Date(p.timestamp).toLocaleDateString('uk-UA');
             return dateFilter.has(pointDate);
         });
     }
 
-    if (pointsForMarkers.length === 0) {
+    if (pointsToRender.length === 0) {
         return;
-    }
-
-    let pointsToRender = [...pointsForMarkers];
-
-    if (!isClusteringEnabled && pointsToRender.length > 0) {
-        const pointGroups = new Map();
-        pointsToRender.forEach(point => {
-            const key = `${point.latitude.toFixed(6)},${point.longitude.toFixed(6)}`;
-            if (!pointGroups.has(key)) pointGroups.set(key, []);
-            pointGroups.get(key).push(point);
-        });
-
-        const newPoints = [];
-        const offsetRadiusMeters = 15;
-
-        pointGroups.forEach(group => {
-            if (group.length <= 1) {
-                newPoints.push(...group);
-            } else {
-                const centerLat = group[0].latitude;
-                const centerLng = group[0].longitude;
-                const latOffset = offsetRadiusMeters / 111132;
-                const lngOffset = offsetRadiusMeters / (111320 * Math.cos(centerLat * Math.PI / 180));
-
-                group.forEach((point, index) => {
-                    const angle = (2 * Math.PI / group.length) * index;
-                    const newLat = centerLat + latOffset * Math.sin(angle);
-                    const newLng = centerLng + lngOffset * Math.cos(angle);
-                    newPoints.push({ ...point, latitude: newLat, longitude: newLng });
-                });
-            }
-        });
-        pointsToRender = newPoints;
     }
 
     const markers = [];
     
-    pointsToRender.forEach((point) => {
-        const originalIndex = route.normalizedPoints.findIndex(p => p.timestamp === point.timestamp);
-        let durationMs = 0;
-        if (originalIndex > 0) {
-            durationMs = new Date(point.timestamp).getTime() - new Date(route.normalizedPoints[originalIndex - 1].timestamp).getTime();
-        }
-        const isLongStop = durationMs > (5 * 60 * 1000);
+    // 2. Створення маркерів
+    pointsToRender.forEach((point, displayIndex) => {
+        // Зберігаємо оригінальний індекс для прив'язки до даних
+        const originalIndex = route.normalizedPoints.indexOf(point);
+        
+        // Тут буде логіка аномалій (поки що беремо з даних, якщо є)
+        const isAnomaly = point.anomalyLevel || null;
 
-        const lat = point.latitude;
-        const lon = point.longitude;
-        let markerColor = routeColor;
-        let markerText = (originalIndex + 1).toString();
-        if (originalIndex === 0) { markerColor = 'green'; markerText = 'S'; }
-        if (originalIndex === route.normalizedPoints.length - 1) { markerColor = 'red'; markerText = 'E'; }
+        const icon = createMarkerIcon(displayIndex, pointsToRender.length, isAnomaly);
         
-        const iconClasses = `custom-marker-icon ${isLongStop ? 'long-stop-marker' : ''}`;
-        
-        const customIcon = L.divIcon({
-            className: iconClasses,
-            html: `<div class="marker-pin" style="background-color: ${markerColor};"></div><div class="marker-number">${markerText}</div>`,
-            iconSize: [32, 45], iconAnchor: [16, 45]
+        const marker = L.marker([point.latitude, point.longitude], { 
+            icon: icon, 
+            draggable: true, // Вмикаємо можливість перетягування
+            originalIndex: originalIndex 
         });
-        
-        const marker = L.marker([lat, lon], { icon: customIcon, timestamp: point.timestamp });
 
-        let popupContent = `<h4>Маршрут: ${route.fileName}</h4><ul>`;
-        popupContent += `<li><strong>Точка №:</strong> ${originalIndex + 1}</li>`;
+        // Формуємо вміст попапу
+        const timeStr = new Date(point.timestamp).toLocaleString('uk-UA');
+        let popupContent = `<b>Точка №${displayIndex + 1}</b><br>${timeStr}`;
+        
         if (point.originalData) {
+            popupContent += `<ul>`;
             for (const key in point.originalData) {
+                // Відображаємо додаткові дані, якщо є
                 popupContent += `<li><strong>${key}:</strong> ${point.originalData[key]}</li>`;
             }
+            popupContent += `</ul>`;
         }
-        popupContent += `</ul>`;
         marker.bindPopup(popupContent);
+
+        // Обробка події завершення перетягування
+        marker.on('dragend', (e) => {
+            const newPos = e.target.getLatLng();
+            if (onPointMove) {
+                // Викликаємо колбек, який оновить Store і перезапустить рендер
+                onPointMove(route.id, originalIndex, newPos.lat, newPos.lng);
+            }
+        });
+
         markers.push(marker);
     });
 
+    // 3. Додавання маркерів на карту (кластеризовано або ні)
     if (isClusteringEnabled) {
         markerClusterGroup.addLayers(markers);
     } else {
         markers.forEach(marker => nonClusteredMarkersLayer.addLayer(marker));
     }
     
-    if (pointsForMarkers.length > 1) {
+    // 4. Побудова лінії маршруту (якщо точок більше однієї)
+    let polyline = null;
+    if (pointsToRender.length > 1) {
         const maxWeight = 12;
         const minWeight = 4;
         const weightStep = (maxWeight - minWeight) / (renderOrder.total || 1);
         const weight = maxWeight - (renderOrder.index * weightStep);
 
-        const roadLatLngs = await getRoute(pointsForMarkers.map(p => [p.latitude, p.longitude]), vehicleType);
+        const coords = pointsToRender.map(p => [p.latitude, p.longitude]);
         
-        const polyline = L.polyline(roadLatLngs, { 
+        // Отримуємо геометрію дороги від OSRM
+        const roadLatLngs = await getRoute(coords, vehicleType);
+        
+        polyline = L.polyline(roadLatLngs, { 
             color: routeColor, 
             weight: weight, 
             opacity: 0.85 
         }).addTo(map);
         
-        const pointIndexMap = pointsForMarkers.map(p => findClosestPointIndex(L.latLng(p.latitude, p.longitude), roadLatLngs));
+        // Зберігаємо прив'язку точок до сегментів лінії (для майбутнього хайлайту)
+        const pointIndexMap = pointsToRender.map(p => findClosestPointIndex(L.latLng(p.latitude, p.longitude), roadLatLngs));
 
         polyline.options.fullGeometry = roadLatLngs;
         polyline.options.pointIndexMap = pointIndexMap;
-        
-        renderedLayers.set(route.id, { markers, polyline, originalPoints: route.normalizedPoints, filteredPoints: pointsForMarkers });
-    } else {
-        renderedLayers.set(route.id, { markers, originalPoints: route.normalizedPoints, filteredPoints: pointsForMarkers });
     }
+
+    // Зберігаємо посилання на шари
+    renderedLayers.set(route.id, { markers, polyline, originalPoints: route.normalizedPoints, filteredPoints: pointsToRender });
 }
 
 function resetHighlight() {
@@ -188,53 +200,23 @@ function resetHighlight() {
     currentlyHighlighted = null;
 }
 
-export function highlightSegment(routeId, originalPointIndex) {
+export function highlightSegment(routeId, originalIndex) {
     const layers = renderedLayers.get(routeId);
-    if (!layers || !layers.polyline || !layers.filteredPoints) return;
+    if (!layers || !layers.markers) return;
 
-    const pointToHighlight = layers.originalPoints[originalPointIndex];
-    const filteredPointIndex = layers.filteredPoints.findIndex(p => p.timestamp === pointToHighlight.timestamp);
-
-    if (filteredPointIndex === -1 || filteredPointIndex >= layers.filteredPoints.length - 1) {
-        resetHighlight();
-        return;
-    }
-
-    if (currentlyHighlighted && currentlyHighlighted.routeId === routeId && currentlyHighlighted.pointIndex === originalPointIndex) {
-        resetHighlight();
-        return;
-    }
-
-    resetHighlight();
-
-    const { polyline } = layers;
-    const { fullGeometry, pointIndexMap } = polyline.options;
+    // Знаходимо маркер за оригінальним індексом
+    const marker = layers.markers.find(m => m.options.originalIndex === originalIndex);
     
-    renderedLayers.forEach((otherLayers, id) => {
-        if (otherLayers.polyline) {
-            const opacity = (id === routeId) ? 0.5 : 0.3;
-            otherLayers.polyline.setStyle({ opacity });
+    if (marker) {
+        if (markerClusterGroup.hasLayer(marker)) {
+            markerClusterGroup.zoomToShowLayer(marker, () => {
+                marker.openPopup();
+            });
+        } else {
+            currentMapInstance.setView(marker.getLatLng(), 15);
+            marker.openPopup();
         }
-    });
-    
-    const geometryStartIndex = pointIndexMap[filteredPointIndex];
-    const geometryEndIndex = pointIndexMap[filteredPointIndex + 1];
-    
-    if (geometryStartIndex === undefined || geometryEndIndex === undefined) return;
-    
-    const segmentGeometry = fullGeometry.slice(geometryStartIndex, geometryEndIndex + 1);
-
-    highlightLayer = L.polyline(segmentGeometry, {
-        color: '#FFFF00', weight: 8, opacity: 1.0, lineCap: 'round'
-    }).addTo(currentMapInstance);
-    highlightLayer.bringToFront();
-    
-    if (segmentGeometry.length > 0) {
-        const bounds = L.latLngBounds(segmentGeometry);
-        currentMapInstance.fitBounds(bounds, { padding: [70, 70], maxZoom: 17 });
     }
-
-    currentlyHighlighted = { routeId, pointIndex: originalPointIndex };
 }
 
 export function clearRouteLayers(routeId) {

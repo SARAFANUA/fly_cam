@@ -24,7 +24,7 @@ export function renderPointsList(route, state, uiRefs, actions) {
 
     uiRefs.routeTitle.textContent = route.fileName;
     
-    // Фільтрація точок для відображення
+    // Фільтрація точок (аналогічно як в map renderer)
     let pointsToDisplay = route.normalizedPoints;
     if (state.globalDateFilter.size > 0 && !route.isLocked) {
         pointsToDisplay = route.normalizedPoints.filter(p => {
@@ -58,6 +58,7 @@ export function renderPointsList(route, state, uiRefs, actions) {
 
         const isLongStop = durationMs > (5 * 60 * 1000); // 5 хв
 
+        // Використовуємо індекс 1..N для відображених точок
         li.innerHTML = `
             <span class="point-col point-index">${index + 1}</span>
             <span class="point-col point-time">${new Date(point.timestamp).toLocaleString('uk-UA')}</span>
@@ -66,7 +67,7 @@ export function renderPointsList(route, state, uiRefs, actions) {
             </span>
         `;
 
-        // Оригінальний індекс потрібен для кліку на карту
+        // Оригінальний індекс потрібен для зв'язку з картою
         const originalIndex = route.normalizedPoints.indexOf(point);
         li.dataset.originalIndex = originalIndex;
         li.addEventListener('click', () => actions.onPointClick(route.id, originalIndex));
@@ -75,7 +76,9 @@ export function renderPointsList(route, state, uiRefs, actions) {
     });
 }
 
+// renderUniqueDates залишається без змін...
 export function renderUniqueDates(container, state, actions) {
+    // ...
     const dateCounts = new Map();
     const sourcePoints = state.routes.size > 0
         ? Array.from(state.routes.values()).flatMap(r => r.normalizedPoints)
