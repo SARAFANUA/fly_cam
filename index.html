@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="css/sidebar.css">
     <link rel="stylesheet" href="css/map.css">
 </head>
+
 <body>
     <div id="global-drop-overlay" class="hidden">
         <div class="drop-message">
@@ -32,22 +33,26 @@
         </div>
     </div>
 
+    <!-- LEFT SIDEBAR -->
     <div class="sidebar" id="sidebar">
-        <div class="sidebar-content"> 
-            
+        <div class="sidebar-content">
+
             <div class="sidebar-header">
                 <h1>FlyKA Platform</h1>
+
                 <div id="drop-area" class="drop-area">
                     <input type="file" id="file-input" accept=".csv, .xlsx, .xls" multiple hidden>
                     <button id="select-files-btn" class="select-files-btn">Обрати файли</button>
-                    <p style="font-size: 0.8em; margin-top:5px; opacity:0.7;">або перетягніть сюди</p>
+                    <p style="font-size:0.8em; margin-top:5px; opacity:0.7;">або перетягніть сюди</p>
                 </div>
             </div>
 
             <div class="sidebar-scrollable-content">
+
+                <!-- Верхні контролли (постійні) -->
                 <div class="map-controls" style="flex-direction: column; align-items: stretch; gap: 10px;">
-                    
-                    <div style="display: flex; gap: 10px; justify-content: space-between; flex-wrap: wrap;">
+
+                    <div style="display:flex; gap:10px; justify-content:space-between; flex-wrap:wrap;">
                         <div class="map-controls-group clustering-group">
                             <span id="clustering-label">Кластери</span>
                             <label class="toggle-switch">
@@ -56,8 +61,8 @@
                             </label>
                         </div>
 
-                        <div class="map-controls-group vehicle-type-group" style="flex-grow: 1;">
-                            <select id="vehicle-type-select" class="custom-select" style="width: 100%;">
+                        <div class="map-controls-group vehicle-type-group" style="flex-grow:1;">
+                            <select id="vehicle-type-select" class="custom-select" style="width:100%;">
                                 <option value="car">Авто</option>
                                 <option value="truck">Вантажівка</option>
                                 <option value="foot">Пішки</option>
@@ -66,79 +71,135 @@
                         </div>
                     </div>
 
-                    <div class="map-controls-group anomaly-settings" style="flex-direction: column; align-items: stretch; border-top:1px solid #ccc; padding-top:10px;">
-                        <span style="font-size:0.9em; margin-bottom:5px; font-weight:bold;">Поріг аномалій (затримка):</span>
-                        
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                            <label style="font-size:0.85em; color:var(--warning-color);"><i class="fa-solid fa-triangle-exclamation"></i> Увага (>%)</label>
-                            <input type="number" id="anomaly-warning-input" value="20" min="0" max="500" style="width:60px; padding:4px; border-radius:4px; border:1px solid #ccc;">
-                        </div>
-                        
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <label style="font-size:0.85em; color:var(--danger-color);"><i class="fa-solid fa-circle-exclamation"></i> Критично (>%)</label>
-                            <input type="number" id="anomaly-danger-input" value="100" min="0" max="1000" style="width:60px; padding:4px; border-radius:4px; border:1px solid #ccc;">
-                        </div>
-                    </div>
-
-                </div>
-
-                <div class="sidebar-panels" id="sidebar-panels">
-                <div id="file-list-container" class="file-list-container panel panel-top">
-                    <div class="panel-head">
-                    <h3>Завантажені маршрути:</h3>
-                    <button class="panel-collapse-btn" data-target="file-list-container" title="Згорнути/розгорнути">
-                        <i class="fa-solid fa-chevron-up"></i>
-                    </button>
-                    </div>
-                    <div class="panel-body">
-                    <ul id="route-items"></ul>
-                    </div>
-                </div>
-
-                <div class="panel-splitter" id="sidebar-splitter" title="Перетягуйте для зміни висоти"></div>
-
-                <div id="points-list-container" class="points-list-container panel panel-bottom">
-                    <div class="panel-head">
-                    <div class="points-list-header">
-                        <h3>Деталі: <span id="points-list-routename"></span></h3>
-                        <div class="points-header-actions" style="display:flex; gap:8px;">
-                        <button id="open-details-modal-btn" title="Відкрити список точок">
+                    <!-- Toolbar керування панелями: 2x2 порядок -->
+                    <div class="filter-toolbar" id="filter-toolbar" title="Порада: затисніть Ctrl, щоб відкрити кілька панелей">
+                        <!-- Row 1 -->
+                        <button class="filter-btn" id="btn-panel-details" data-panel="panel-details" title="Деталі (фіксації)">
                             <i class="fa-solid fa-list-ul"></i>
+                            <span>Деталі</span>
                         </button>
+
+                        <button class="filter-btn" id="btn-panel-dates" data-panel="panel-dates" title="Фільтр по даті">
+                            <i class="fa-solid fa-calendar-days"></i>
+                            <span>Дата</span>
+                        </button>
+
+                        <!-- Row 2 -->
+                        <button class="filter-btn" id="btn-panel-routes" data-panel="panel-routes" title="Завантажені маршрути">
+                            <i class="fa-solid fa-route"></i>
+                            <span>Маршрути</span>
+                        </button>
+
+                        <button class="filter-btn" id="btn-panel-anomalies" data-panel="panel-anomalies" title="Аномалії (затримка)">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span>Аномалії</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Панелі -->
+                <div class="sidebar-panels" id="sidebar-panels">
+
+                    <!-- DETAILS -->
+                    <section class="panel panel-soft hidden" id="panel-details">
+                        <div class="panel-head">
+                            <h3>Деталі: <span id="points-list-routename"></span></h3>
+
+                            <div class="panel-head-actions">
+                                <button id="open-details-modal-btn" class="panel-icon-btn" title="Розгорнути (модалка)">
+                                    <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
+                                </button>
+
+                                <button class="panel-icon-btn panel-close-btn" data-close-panel="panel-details" title="Закрити">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
-                    <button class="panel-collapse-btn" data-target="points-list-container" title="Згорнути/розгорнути">
-                        <i class="fa-solid fa-chevron-down"></i>
-                    </button>
-                    </div>
+                        <div class="panel-body">
+                            <div id="points-list-summary" class="sticky-summary"></div>
+                            <ul id="points-list-items">
+                                <li class="empty-list-item">Оберіть маршрут для перегляду</li>
+                            </ul>
+                        </div>
+                    </section>
 
-                    <div class="panel-body">
-                    <div id="points-list-summary" class="sticky-summary"></div>
-                    <ul id="points-list-items">
-                        <li class="empty-list-item">Оберіть маршрут для перегляду</li>
-                    </ul>
-                    </div>
+                    <!-- DATES -->
+                    <section class="panel panel-soft hidden" id="panel-dates">
+                        <div class="panel-head">
+                            <h3>Фільтр по даті</h3>
+                            <div class="panel-head-actions">
+                                <button class="panel-icon-btn panel-close-btn" data-close-panel="panel-dates" title="Закрити">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="panel-body" style="padding:0;">
+                            <ul id="unique-dates-sidebar-list" class="date-filter-list"></ul>
+                        </div>
+                    </section>
+
+                    <!-- ROUTES -->
+                    <section class="panel panel-soft hidden" id="panel-routes">
+                        <div class="panel-head">
+                            <h3>Завантажені маршрути</h3>
+                            <div class="panel-head-actions">
+                                <button class="panel-icon-btn panel-close-btn" data-close-panel="panel-routes" title="Закрити">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="panel-body" style="padding:0;">
+                            <ul id="route-items"></ul>
+                        </div>
+                    </section>
+
+                    <!-- ANOMALIES -->
+                    <section class="panel panel-soft hidden" id="panel-anomalies">
+                        <div class="panel-head">
+                            <h3>Поріг аномалій (затримка)</h3>
+                            <div class="panel-head-actions">
+                                <button class="panel-icon-btn panel-close-btn" data-close-panel="panel-anomalies" title="Закрити">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="panel-body" style="display:flex; flex-direction:column; gap:10px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                                <label style="font-size:0.9em; color:var(--warning-color); display:flex; gap:6px; align-items:center;">
+                                    <i class="fa-solid fa-triangle-exclamation"></i> Увага (> %)
+                                </label>
+                                <input type="number" id="anomaly-warning-input" value="20" min="0" max="500"
+                                       style="width:90px; padding:6px 8px; border-radius:8px; border:1px solid var(--border-color);">
+                            </div>
+
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                                <label style="font-size:0.9em; color:var(--danger-color); display:flex; gap:6px; align-items:center;">
+                                    <i class="fa-solid fa-circle-exclamation"></i> Критично (> %)
+                                </label>
+                                <input type="number" id="anomaly-danger-input" value="100" min="0" max="1000"
+                                       style="width:90px; padding:6px 8px; border-radius:8px; border:1px solid var(--border-color);">
+                            </div>
+                        </div>
+                    </section>
+
                 </div>
-                </div>
-
             </div>
 
             <div class="sidebar-footer">
-                <div class="filter-section">
-                    <h3>Фільтр по даті</h3>
-                    <ul id="unique-dates-sidebar-list" class="date-filter-list"></ul>
-                </div>
                 <div id="message" class="message"></div>
                 <p class="developer-info">FlyKA Platform v2.2</p>
             </div>
-        </div> 
+        </div>
     </div>
 
+    <!-- Left sidebar toggle -->
     <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="Сховати/Показати сайдбар">«</button>
 
     <div id="map"></div>
 
+    <!-- RIGHT SIDEBAR -->
     <div class="sidebar-right" id="sidebar-right">
         <button id="sidebar-right-toggle-btn" class="sidebar-toggle-btn right" title="Фільтри камер">
             <i class="fa-solid fa-video"></i>
@@ -153,26 +214,31 @@
         </div>
     </div>
 
+    <!-- Modal -->
     <div id="modal-container" class="modal-container hidden">
         <div id="modal-overlay" class="modal-overlay"></div>
+
         <div class="modal-content" id="modal-content">
             <div class="modal-header" id="modal-header">
                 <h3 id="modal-title">Деталі маршруту</h3>
+
                 <div class="modal-header-controls" style="display:flex; gap:15px; align-items:center;">
-                    <div style="display:flex; align-items:center; gap:5px; font-size:0.8em; color: #555;">
+                    <div style="display:flex; align-items:center; gap:5px; font-size:0.8em; color:#555;">
                         <label for="toggle-overlay-btn" style="cursor:pointer;">Фон</label>
                         <label class="toggle-switch-small">
-                            <input type="checkbox" id="toggle-overlay-btn"> <span class="slider-small"></span>
+                            <input type="checkbox" id="toggle-overlay-btn">
+                            <span class="slider-small"></span>
                         </label>
                     </div>
+
                     <button id="modal-close-btn" class="modal-close-btn">&times;</button>
                 </div>
             </div>
-            
+
             <div class="modal-body" id="modal-body">
                 <ul id="modal-points-list"></ul>
             </div>
-            
+
             <div class="resizer" id="resizer"></div>
         </div>
     </div>

@@ -1,5 +1,5 @@
 // js/ui/pointsListUI.js
-import { formatDuration } from '../map/markerUtils.js';
+import { formatDuration } from './map/markerUtils.js';
 
 export function clearPointsList(uiRefs) {
     uiRefs.routeTitle.textContent = '';
@@ -7,11 +7,61 @@ export function clearPointsList(uiRefs) {
     uiRefs.list.innerHTML = '<li class="empty-list-item">Оберіть маршрут для перегляду</li>';
 }
 
+function isSidebarList(uiRefs) {
+    return uiRefs?.list?.id === 'points-list-items';
+}
+
+function timeHHMM(ts) {
+    return new Date(ts).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+}
+
+function buildDiffTag(point) {
+    let anomalyClass = '';
+    let diffHtml = '<span class="status-tag tag-neutral" style="justify-content:center;">—</span>';
+    let planText = '<span class="faded">—</span>';
+    let factText = '<span class="faded">—</span>';
+
+    if (point.timingInfo) {
+        const { expected, actual, diff, percent } = point.timingInfo;
+
+        planText = formatDuration(expected);
+        factText = formatDuration(actual);
+
+        const sign = diff > 0 ? '+' : '';
+        const absPercent = Math.abs(Math.round(percent));
+
+        let tagClass = 'tag-success';
+
+        if (diff > 0) { // затримка
+            if (point.anomalyLevel === 'high') {
+                tagClass = 'tag-danger';
+                anomalyClass = 'row-danger';
+            } else if (point.anomalyLevel === 'medium') {
+                tagClass = 'tag-warning';
+                anomalyClass = 'row-warning';
+            } else {
+                tagClass = 'tag-neutral';
+            }
+        }
+
+        diffHtml = `
+            <div class="status-tag ${tagClass}">
+                <span>${sign}${formatDuration(diff)}</span>
+                <small>${absPercent}%</small>
+            </div>
+        `;
+    }
+
+    return { anomalyClass, diffHtml, planText, factText };
+}
+
 export function renderPointsList(route, state, uiRefs, actions) {
     if (!route) return;
 
+    const sidebarMode = isSidebarList(uiRefs);
+
     uiRefs.routeTitle.textContent = route.fileName;
-    
+
     // Фільтрація точок
     let pointsToDisplay = route.normalizedPoints;
     if (state.globalDateFilter.size > 0 && !route.isLocked) {
@@ -22,99 +72,67 @@ export function renderPointsList(route, state, uiRefs, actions) {
     }
 
     if (pointsToDisplay.length === 0) {
+        uiRefs.summary.innerHTML = '';
         uiRefs.list.innerHTML = '<li class="empty-list-item">Немає точок у вибраному діапазоні</li>';
         return;
     }
 
-    // 1. ЗАГОЛОВОК ТАБЛИЦІ
-    // Додаємо клас points-grid-layout, щоб він мав ту ж саму сітку, що й рядки
+    // HEADER (sticky)
+    // У сайдбарі в першій колонці показуємо "ID/#" (оригінал/після фільтра)
     uiRefs.summary.innerHTML = `
         <div class="points-table-header points-grid-layout">
-            <span style="text-align: center">#</span>
+            <span style="text-align:center">${sidebarMode ? 'ID/#' : '#'}</span>
             <span>ЧАС</span>
-            <span style="text-align: right">ПЛАН</span>
-            <span style="text-align: right">ФАКТ</span>
-            <span style="text-align: right">ВІДХИЛЕННЯ</span>
+            <span style="text-align:right">ПЛАН</span>
+            <span style="text-align:right">ФАКТ</span>
+            <span style="text-align:right">ВІДХИЛЕННЯ</span>
         </div>
     `;
-    
+
     uiRefs.list.innerHTML = '';
     const fragment = document.createDocumentFragment();
 
-    pointsToDisplay.forEach((point, index) => {
+    pointsToDisplay.forEach((point, filteredIndex) => {
         const li = document.createElement('li');
-        
-        // Додаємо два класи: 
-        // point-list-row (стилі рядка, ховер, курсор)
-        // points-grid-layout (структура колонок Grid)
         li.className = 'point-list-row points-grid-layout';
-        
-        // --- Логіка відображення даних ---
-        let anomalyClass = '';
-        let diffHtml = '<span class="status-tag tag-neutral" style="justify-content:center;">—</span>';
-        let planText = '<span class="faded">—</span>';
-        let factText = '<span class="faded">—</span>';
 
-        if (point.timingInfo) {
-            const { expected, actual, diff, percent } = point.timingInfo;
-            
-            planText = formatDuration(expected);
-            factText = formatDuration(actual);
-            
-            const sign = diff > 0 ? '+' : '';
-            const absPercent = Math.abs(Math.round(percent));
-            
-            // Вибір кольору бейджа
-            let tagClass = 'tag-success'; 
-            
-            if (diff > 0) { // Затримка
-                if (point.anomalyLevel === 'high') {
-                    tagClass = 'tag-danger';
-                    anomalyClass = 'row-danger'; // Підсвітка всього рядка
-                } else if (point.anomalyLevel === 'medium') {
-                    tagClass = 'tag-warning';
-                    anomalyClass = 'row-warning';
-                } else {
-                    tagClass = 'tag-neutral';
-                }
-            }
-
-            // Формуємо бейдж
-            diffHtml = `
-                <div class="status-tag ${tagClass}">
-                    <span>${sign}${formatDuration(diff)}</span>
-                    <small>${absPercent}%</small>
-                </div>
-            `;
-        }
-
-        // Якщо є аномалія, додаємо клас підсвітки рядка
+        const { anomalyClass, diffHtml, planText, factText } = buildDiffTag(point);
         if (anomalyClass) li.classList.add(anomalyClass);
 
-        const timeStr = new Date(point.timestamp).toLocaleTimeString('uk-UA', {
-            hour: '2-digit', 
-            minute: '2-digit'
-        });
+        const timeStr = timeHHMM(point.timestamp);
 
-        // HTML структура (Grid Cell -> Content)
+        // originalIndex: позиція в повному масиві (як у файлі)
+        const originalIndex = route.normalizedPoints.indexOf(point);
+        li.dataset.originalIndex = originalIndex;
+
+        // COL IDX:
+        // - sidebar: показуємо original+1 та filtered+1 (два рядки)
+        // - modal: показуємо лише filtered+1
+        const idxHtml = sidebarMode
+            ? `
+                <div class="col-idx" style="display:flex; flex-direction:column; align-items:center; line-height:1.05;">
+                    <span style="font-weight:700; color:#64748b;">${originalIndex + 1}</span>
+                    <span style="font-size:.75em; color:#94a3b8;">${filteredIndex + 1}</span>
+                </div>
+              `
+            : `<span class="col-idx">${filteredIndex + 1}</span>`;
+
         li.innerHTML = `
-            <span class="col-idx">${index + 1}</span>
+            ${idxHtml}
             <span class="col-time">${timeStr}</span>
             <span class="col-val">${planText}</span>
             <span class="col-val" style="font-weight:700; color:#1e293b;">${factText}</span>
             <div class="col-diff-wrapper">${diffHtml}</div>
         `;
 
-        const originalIndex = route.normalizedPoints.indexOf(point);
-        li.dataset.originalIndex = originalIndex;
-        
         li.addEventListener('click', () => {
             const active = uiRefs.list.querySelector('.active-row');
             if (active) active.classList.remove('active-row');
+
             li.classList.add('active-row');
             li.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            
-            actions.onPointClick(route.id, originalIndex);
+
+            if (actions?.onPointClick) actions.onPointClick(route.id, originalIndex);
         });
 
         fragment.appendChild(li);
@@ -123,7 +141,7 @@ export function renderPointsList(route, state, uiRefs, actions) {
     uiRefs.list.appendChild(fragment);
 }
 
-// renderUniqueDates залишається без змін...
+// renderUniqueDates — без змін
 export function renderUniqueDates(container, state, actions) {
     const dateCounts = new Map();
     const sourcePoints = state.routes.size > 0
@@ -147,9 +165,8 @@ export function renderUniqueDates(container, state, actions) {
 
     sortedDates.forEach(({ date, count }) => {
         const li = document.createElement('li');
-        if (state.globalDateFilter.has(date)) {
-            li.classList.add('active');
-        }
+        if (state.globalDateFilter.has(date)) li.classList.add('active');
+
         li.innerHTML = `
             <span class="unique-date-str">${date}</span>
             <span class="unique-date-count">${count} фікс.</span>
