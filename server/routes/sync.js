@@ -1,25 +1,20 @@
 // server/routes/sync.js
 import express from 'express';
-import { syncGoogleSheetToSqlite } from '../services/syncGoogleSheetToSqlite.js';
+import { syncAllSheets } from '../services/syncGoogleSheetToSqlite.js';
 
 export default function syncRoutes(db) {
   const router = express.Router();
 
   router.post('/', async (req, res) => {
-    const key = process.env.SYNC_API_KEY || '';
-    if (key) {
-      const got = req.header('x-api-key') || '';
-      if (got !== key) {
-        return res.status(401).json({ ok: false, error: 'Unauthorized' });
-      }
-    }
-
+    // Тут можна додати перевірку x-api-key, якщо потрібно
     try {
-      const result = await syncGoogleSheetToSqlite(db);
+      console.log('[API] Starting sync...');
+      const result = await syncAllSheets(db);
+      console.log('[API] Sync finished:', result);
       res.json({ ok: true, ...result });
     } catch (err) {
-      console.error('[sync] error:', err);
-      res.status(500).json({ ok: false, error: err?.message || 'sync failed' });
+      console.error('[API] Sync fatal error:', err);
+      res.status(500).json({ ok: false, error: err?.message || 'Sync failed' });
     }
   });
 

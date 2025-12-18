@@ -141,3 +141,64 @@
     cursor: pointer;
 }
 .sidebar-toggle-btn.right:hover { width: 30px; }
+
+/* css/sidebar-layout.css */
+
+/* ... (ваш код вище без змін) ... */
+
+/* === ВИПРАВЛЕННЯ ПРАВОГО САЙДБАРУ (Flex Layout) === */
+
+/* 1. Головний контейнер контенту */
+.sidebar-right .sidebar-content {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    padding: 0 !important; /* Прибираємо падінг батька, щоб футер прилип до країв */
+    overflow: hidden !important; /* Прибираємо зовнішній скрол */
+}
+
+/* 2. Шапка (Header) */
+.sidebar-right .sidebar-header {
+    flex-shrink: 0; /* Не стискається */
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+    background: #fff;
+}
+
+/* 3. Список фільтрів (Scrollable Body) */
+#camera-filters-container {
+    flex-grow: 1; /* Займає все вільне місце */
+    overflow-y: auto !important; /* Скрол ТІЛЬКИ тут */
+    padding: 15px; /* Внутрішні відступи */
+    min-height: 0; /* Важливо для Firefox */
+}
+
+/* 4. Фіксований футер з кнопкою */
+#camera-sidebar-footer {
+    flex-shrink: 0; /* Не стискається */
+    padding: 15px;
+    background: #fff; /* Фон щоб не просвічувало */
+    border-top: 1px solid var(--border-color);
+    z-index: 10;
+    box-shadow: 0 -4px 10px rgba(0,0,0,0.03); /* Легка тінь зверху */
+}
+
+/* Стиль кнопки оновлення */
+#sync-db-btn {
+    width: 100%;
+    background-color: #e2e8f0;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    font-weight: 600;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+#sync-db-btn:hover {
+    background-color: #cbd5e1;
+}

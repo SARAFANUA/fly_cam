@@ -465,7 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Cameras reload
     window.reloadCameras = async (filters, clusteringOverride = null) => {
         try {
-            const data = await fetchCameras({ ...filters, limit: 10000 });
+            const data = await fetchCameras({ ...filters, limit: 50000 });
             const items = data?.items || [];
 
             let isClustering;

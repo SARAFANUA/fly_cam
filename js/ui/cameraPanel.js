@@ -9,7 +9,7 @@ let camerasVisible = true;
 let cameraClusteringEnabled = true;
 let lastFilters = {};
 
-// HTML: Замінили datalist на div.autocomplete-dropdown
+// --- HTML: Тільки фільтри (без кнопки оновлення) ---
 function buildCameraPanelHtml() {
   return `
     <section class="panel camera-panel-wrapper">
@@ -97,11 +97,65 @@ function buildCameraPanelHtml() {
       </button>
       
       <div id="camera-panel-hint" class="results-hint"></div>
+      
     </section>
   `;
 }
 
-// Функція завантаження. ТЕПЕР ВИКОРИСТОВУЄ BBOX
+// --- Створення фіксованого футера для кнопки ---
+function ensureSyncButtonFooter(sidebarContent) {
+    // Перевіряємо, чи футер вже є, щоб не дублювати
+    if (document.getElementById('camera-sidebar-footer')) return;
+
+    const footer = document.createElement('div');
+    footer.id = 'camera-sidebar-footer';
+    
+    // HTML кнопки
+    footer.innerHTML = `
+        <button id="sync-db-btn" type="button">
+            <i class="fa-solid fa-rotate"></i> Оновити базу камер
+        </button>
+        <div id="sync-status" style="font-size: 0.75em; color: #888; margin-top: 5px; text-align: center;"></div>
+    `;
+    
+    // Вставляємо футер ПІСЛЯ контейнера скролу, але ВСЕРЕДИНУ sidebarContent
+    sidebarContent.appendChild(footer);
+
+    // Додаємо логіку кліку
+    const syncBtn = footer.querySelector('#sync-db-btn');
+    const syncStatus = footer.querySelector('#sync-status');
+
+    syncBtn.onclick = async () => {
+        if (!confirm('Оновити базу даних камер з Google Таблиць? Це може зайняти час.')) return;
+        
+        syncBtn.disabled = true;
+        syncBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Оновлення...';
+        syncStatus.textContent = 'З\'єднання з сервером...';
+
+        try {
+            const res = await fetch('/api/sync', { method: 'POST' });
+            const data = await res.json();
+
+            if (data.ok) {
+                const count = data.rows_upserted || 0;
+                syncStatus.textContent = `Успішно! Оновлено: ${count} камер.`;
+                syncStatus.style.color = 'green';
+                // Оновлюємо карту
+                reloadWithCurrentSettings().catch(console.error);
+            } else {
+                throw new Error(data.error || 'Помилка сервера');
+            }
+        } catch (e) {
+            console.error(e);
+            syncStatus.textContent = `Помилка: ${e.message}`;
+            syncStatus.style.color = 'red';
+        } finally {
+            syncBtn.disabled = false;
+            syncBtn.innerHTML = '<i class="fa-solid fa-rotate"></i> Оновити базу камер';
+        }
+    };
+}
+
 async function reloadWithCurrentSettings() {
   if (mapInstance) cameraRenderer.setMapInstance(mapInstance);
   cameraRenderer.setVisibility(camerasVisible);
@@ -111,16 +165,7 @@ async function reloadWithCurrentSettings() {
     return;
   }
 
-  // Отримуємо межі карти для фільтрації (south,west,north,east)
   const bounds = mapInstance.getBounds();
-  const bbox = bounds.toBBoxString(); // "west,south,east,north" -> API usually expects "south,west,north,east" or checks logic
-
-  // Leaflet toBBoxString() returns: "west,south,east,north"
-  // Server route checks: params.bbox.split(',') -> [south, west, north, east]
-  // Tomu treba pereformatuvaty string abo zminyty server logic.
-  // Standard GeoJSON bbox is [minX, minY, maxX, maxY] -> [west, south, east, north].
-  // Давайте сформуємо bbox вручну, щоб точно співпадало з сервером (server/routes/cameras.js):
-  // params.bbox.split(',') => [south, west, north, east]
   const south = bounds.getSouth();
   const west = bounds.getWest();
   const north = bounds.getNorth();
@@ -128,7 +173,6 @@ async function reloadWithCurrentSettings() {
   const bboxStr = `${south},${west},${north},${east}`;
 
   if (typeof window.reloadCameras === 'function') {
-      // Передаємо bbox у фільтри
       await window.reloadCameras({ ...lastFilters, bbox: bboxStr }, cameraClusteringEnabled);
   }
 }
@@ -144,21 +188,30 @@ function togglePanel(isOpen) {
     const ui = getElements();
     if (isOpen) {
         ui.sidebarRight.classList.add('open');
-        // При відкритті панелі - одразу оновлюємо камери для поточної області
         reloadWithCurrentSettings().catch(console.error);
     } else {
         ui.sidebarRight.classList.remove('open');
     }
 }
 
+// 2. Головна функція ініціалізації
 export function initCameraPanel(map) {
   mapInstance = map;
   const ui = getElements();
 
+  // Рендеримо фільтри (Скрол зона)
   if (ui.cameraFiltersContainer) {
       ui.cameraFiltersContainer.innerHTML = buildCameraPanelHtml();
   }
 
+  // Створюємо Футер (Фіксована зона)
+  // Шукаємо батьківський елемент sidebar-content у правому сайдбарі
+  const sidebarContent = ui.sidebarRight.querySelector('.sidebar-content');
+  if (sidebarContent) {
+      ensureSyncButtonFooter(sidebarContent);
+  }
+
+  // Кнопки відкриття/закриття
   if (ui.openCameraPanelBtn) {
       ui.openCameraPanelBtn.onclick = () => togglePanel(true);
   }
@@ -166,19 +219,18 @@ export function initCameraPanel(map) {
       ui.closeCameraPanelBtn.onclick = () => togglePanel(false);
   }
 
-  // --- BBOX LOGIC: Слухаємо рух карти ---
-  let moveTimeout;
-  map.on('moveend', () => {
-      // Оновлюємо, тільки якщо панель відкрита АБО камери увімкнені
-      if (camerasVisible && ui.sidebarRight.classList.contains('open')) {
-          clearTimeout(moveTimeout);
-          // Дебаунс, щоб не спамити API при швидкому скролі
-          moveTimeout = setTimeout(() => {
-              reloadWithCurrentSettings().catch(console.error);
-          }, 500); 
-      }
-  });
+//   // Слухач руху карти (BBOX)
+//   let moveTimeout;
+//   map.on('moveend', () => {
+//       if (camerasVisible ) { //&& ui.sidebarRight.classList.contains('open')
+//           clearTimeout(moveTimeout);
+//           moveTimeout = setTimeout(() => {
+//               reloadWithCurrentSettings().catch(console.error);
+//           }, 500); 
+//       }
+//   });
 
+  // Ініціалізація логіки фільтрів
   initCameraFilters({ 
       onChange: (filters) => {
           lastFilters = filters;
@@ -186,6 +238,7 @@ export function initCameraPanel(map) {
       }
   });
 
+  // Тумблери (Vis/Cluster)
   const visBtn = document.getElementById('toggle-cameras-visibility-btn');
   const clustBtn = document.getElementById('toggle-camera-clustering-btn');
 
@@ -193,8 +246,8 @@ export function initCameraPanel(map) {
       visBtn.checked = camerasVisible;
       visBtn.onchange = (e) => {
           camerasVisible = e.target.checked;
-          if (camerasVisible) reloadWithCurrentSettings(); // Завантажити, якщо увімкнули
-          else updateVisualsOnly(); // Просто приховати
+          if (camerasVisible) reloadWithCurrentSettings();
+          else updateVisualsOnly();
       };
   }
   if (clustBtn) {

@@ -100,3 +100,5 @@ Desktop.ini
 *.csv
 *.xlsx
 *.xls
+sheets.json
+service-account.json
