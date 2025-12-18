@@ -4,6 +4,7 @@ import * as markerRenderer from './map/markerRenderer.js';
 import * as cameraRenderer from './map/cameraRenderer.js';
 import { fetchCameras } from './api/camerasApi.js';
 import { initCameraPanel } from './ui/cameraPanel.js';
+import { anomalyService } from './services/anomalyService.js';
 
 import { store } from './state/store.js';
 import { getElements, showMessage } from './ui/dom.js';
@@ -76,12 +77,21 @@ function removeRoute(id) {
     updateApp();
 }
 
+// 1. ОНОВЛЕНА ФУНКЦІЯ ФІЛЬТРУ (Ctrl замість Shift)
 function handleDateFilter(date, event) {
-    if (event.shiftKey) {
-        store.globalDateFilter.has(date) ? store.globalDateFilter.delete(date) : store.globalDateFilter.add(date);
+    // Використовуємо ctrlKey (Windows/Linux) або metaKey (Command на Mac)
+    if (event.ctrlKey || event.metaKey) {
+        store.globalDateFilter.has(date) 
+            ? store.globalDateFilter.delete(date) 
+            : store.globalDateFilter.add(date);
     } else {
-        if (store.globalDateFilter.has(date) && store.globalDateFilter.size === 1) store.globalDateFilter.clear();
-        else { store.globalDateFilter.clear(); store.globalDateFilter.add(date); }
+        // Звичайний клік - вибір однієї дати
+        if (store.globalDateFilter.has(date) && store.globalDateFilter.size === 1) {
+            store.globalDateFilter.clear(); // Клік по активній - зняти виділення
+        } else { 
+            store.globalDateFilter.clear(); 
+            store.globalDateFilter.add(date); 
+        }
     }
     
     updateApp();

@@ -1,11 +1,13 @@
 // js/map/markerRenderer.js
 import { getRoute } from '../api/routingService.js';
+import { anomalyService } from '../services/anomalyService.js';
 
 let currentMapInstance;
 const renderedLayers = new Map();
 let highlightLayer = null;
 let currentlyHighlighted = null;
 
+// Налаштування кластеризації
 const markerClusterGroup = L.markerClusterGroup({
     showCoverageOnHover: false,
     maxClusterRadius: 40,
@@ -32,6 +34,7 @@ const markerClusterGroup = L.markerClusterGroup({
 
 let nonClusteredMarkersLayer = L.layerGroup(); 
 
+// Допоміжна функція для пошуку індексу точки на лінії
 function findClosestPointIndex(targetPoint, geometry) {
     let closestIndex = -1;
     let minDistance = Infinity;
@@ -52,17 +55,17 @@ export function setMapInstance(map) {
     currentMapInstance.addLayer(nonClusteredMarkersLayer);
 }
 
-// Функція створення іконки маркера з урахуванням типу (Старт/Фініш/Аномалія)
+// Функція створення іконки (Старт/Фініш/Аномалії)
 function createMarkerIcon(index, totalCount, isAnomaly) {
     let typeClass = '';
     let text = (index + 1).toString();
     
-    // 1. Старт (перша точка)
+    // 1. Старт
     if (index === 0) {
         typeClass = 'marker-start';
         text = 'S';
     } 
-    // 2. Фініш (остання точка)
+    // 2. Фініш
     else if (index === totalCount - 1) {
         typeClass = 'marker-finish';
         text = 'F';
@@ -84,7 +87,7 @@ function createMarkerIcon(index, totalCount, isAnomaly) {
     });
 }
 
-// ОНОВЛЕНА ФУНКЦІЯ: додано параметр onPointMove
+// ГОЛОВНА ФУНКЦІЯ РЕНДЕРУ
 export async function renderMarkers(route, map, routeColor, isClusteringEnabled, dateFilter = new Set(), renderOrder = { index: 0, total: 1 }, vehicleType = 'car', onPointMove = null) {
     if (!route || !route.normalizedPoints || route.normalizedPoints.length === 0) {
         return;
@@ -106,43 +109,71 @@ export async function renderMarkers(route, map, routeColor, isClusteringEnabled,
         return;
     }
 
+    // 2. Отримання маршруту та Аналіз аномалій
+    // Ми робимо це ДО створення маркерів, щоб знати, які маркери фарбувати
+    let routeGeometry = null; // Геометрія для малювання лінії
+    
+    if (pointsToRender.length > 1) {
+        const coords = pointsToRender.map(p => [p.latitude, p.longitude]);
+        
+        // Отримуємо об'єкт { geometry, legs, duration, distance }
+        const routeData = await getRoute(coords, vehicleType);
+        
+        if (routeData) {
+            routeGeometry = routeData.geometry || coords; // Фолбек на прямі лінії
+            
+            // Якщо є сегменти (legs), запускаємо аналіз
+            if (routeData.legs && routeData.legs.length > 0) {
+                // Ця функція поверне новий масив точок з доданим полем anomalyLevel
+                pointsToRender = anomalyService.analyzeRoute(pointsToRender, routeData.legs);
+            }
+        }
+    }
+
+    // 3. Створення маркерів (вже з даними про аномалії)
     const markers = [];
     
-    // 2. Створення маркерів
     pointsToRender.forEach((point, displayIndex) => {
-        // Зберігаємо оригінальний індекс для прив'язки до даних
         const originalIndex = route.normalizedPoints.indexOf(point);
-        
-        // Тут буде логіка аномалій (поки що беремо з даних, якщо є)
         const isAnomaly = point.anomalyLevel || null;
 
         const icon = createMarkerIcon(displayIndex, pointsToRender.length, isAnomaly);
         
         const marker = L.marker([point.latitude, point.longitude], { 
             icon: icon, 
-            draggable: true, // Вмикаємо можливість перетягування
+            draggable: true, 
             originalIndex: originalIndex 
         });
 
-        // Формуємо вміст попапу
+        // Попап з деталями
         const timeStr = new Date(point.timestamp).toLocaleString('uk-UA');
         let popupContent = `<b>Точка №${displayIndex + 1}</b><br>${timeStr}`;
         
+        // Якщо є аналіз затримки
+        if (point.analysis && point.analysis.delay > 60) {
+             const delayStr = anomalyService.formatDelay(point.analysis.delay);
+             const colorStyle = isAnomaly === 'high' ? 'color:#b91c1c;font-weight:bold' : (isAnomaly === 'medium' ? 'color:#d97706;font-weight:bold' : '');
+             popupContent += `<br><span style="${colorStyle}">⚠️ Затримка: ${delayStr}</span>`;
+             popupContent += `<hr style="margin:5px 0; opacity:0.3">`;
+             popupContent += `<small>Очікувано: ${(point.analysis.expected/60).toFixed(1)} хв</small><br>`;
+             popupContent += `<small>Фактично: ${(point.analysis.fact/60).toFixed(1)} хв</small>`;
+        }
+
+        // Додаткові дані з файлу
         if (point.originalData) {
-            popupContent += `<ul>`;
+            popupContent += `<hr style="margin:5px 0; opacity:0.3"><ul>`;
             for (const key in point.originalData) {
-                // Відображаємо додаткові дані, якщо є
                 popupContent += `<li><strong>${key}:</strong> ${point.originalData[key]}</li>`;
             }
             popupContent += `</ul>`;
         }
+
         marker.bindPopup(popupContent);
 
-        // Обробка події завершення перетягування
+        // Drag & Drop
         marker.on('dragend', (e) => {
             const newPos = e.target.getLatLng();
             if (onPointMove) {
-                // Викликаємо колбек, який оновить Store і перезапустить рендер
                 onPointMove(route.id, originalIndex, newPos.lat, newPos.lng);
             }
         });
@@ -150,40 +181,34 @@ export async function renderMarkers(route, map, routeColor, isClusteringEnabled,
         markers.push(marker);
     });
 
-    // 3. Додавання маркерів на карту (кластеризовано або ні)
+    // 4. Додавання маркерів на шар
     if (isClusteringEnabled) {
         markerClusterGroup.addLayers(markers);
     } else {
         markers.forEach(marker => nonClusteredMarkersLayer.addLayer(marker));
     }
     
-    // 4. Побудова лінії маршруту (якщо точок більше однієї)
+    // 5. Малювання лінії
     let polyline = null;
-    if (pointsToRender.length > 1) {
+    if (routeGeometry && routeGeometry.length > 0) {
         const maxWeight = 12;
         const minWeight = 4;
         const weightStep = (maxWeight - minWeight) / (renderOrder.total || 1);
         const weight = maxWeight - (renderOrder.index * weightStep);
 
-        const coords = pointsToRender.map(p => [p.latitude, p.longitude]);
-        
-        // Отримуємо геометрію дороги від OSRM
-        const roadLatLngs = await getRoute(coords, vehicleType);
-        
-        polyline = L.polyline(roadLatLngs, { 
+        polyline = L.polyline(routeGeometry, { 
             color: routeColor, 
             weight: weight, 
             opacity: 0.85 
         }).addTo(map);
         
-        // Зберігаємо прив'язку точок до сегментів лінії (для майбутнього хайлайту)
-        const pointIndexMap = pointsToRender.map(p => findClosestPointIndex(L.latLng(p.latitude, p.longitude), roadLatLngs));
-
-        polyline.options.fullGeometry = roadLatLngs;
+        // Індексація для хайлайту
+        const pointIndexMap = pointsToRender.map(p => findClosestPointIndex(L.latLng(p.latitude, p.longitude), routeGeometry));
+        polyline.options.fullGeometry = routeGeometry;
         polyline.options.pointIndexMap = pointIndexMap;
     }
 
-    // Зберігаємо посилання на шари
+    // Збереження шарів
     renderedLayers.set(route.id, { markers, polyline, originalPoints: route.normalizedPoints, filteredPoints: pointsToRender });
 }
 
@@ -204,7 +229,6 @@ export function highlightSegment(routeId, originalIndex) {
     const layers = renderedLayers.get(routeId);
     if (!layers || !layers.markers) return;
 
-    // Знаходимо маркер за оригінальним індексом
     const marker = layers.markers.find(m => m.options.originalIndex === originalIndex);
     
     if (marker) {
