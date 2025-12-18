@@ -396,3 +396,127 @@ input:checked + .slider-small:before { transform: translateX(14px); }
 .autocomplete-dropdown::-webkit-scrollbar { width: 6px; }
 .autocomplete-dropdown::-webkit-scrollbar-track { background: #f1f1f1; }
 .autocomplete-dropdown::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+
+/* --- ANALYST DASHBOARD TABLE (STRICT LAYOUT) --- */
+
+/* Контейнер списку */
+#modal-points-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    /* Моноширинний шрифт для цифр — це стандарт аналітики */
+    font-family: 'Roboto Mono', 'SF Mono', 'Consolas', monospace; 
+}
+
+/* СІТКА (GRID)
+   Налаштування колонок:
+   1. # (Індекс) -> 40px (фіксована)
+   2. Час -> 70px (фіксована)
+   3. План -> 1fr (гнучка, вирівнювання вправо)
+   4. Факт -> 1fr (гнучка, вирівнювання вправо)
+   5. Відхилення -> 150px (фіксована під бейдж)
+*/
+.points-grid-layout {
+    display: grid;
+    grid-template-columns: 40px 70px 1fr 1fr 150px; 
+    gap: 15px;
+    align-items: center; /* Центрування по вертикалі - КРИТИЧНО для одного рядка */
+    padding: 6px 16px;   /* Зменшена висота рядка для щільності */
+    box-sizing: border-box;
+}
+
+/* ЗАГОЛОВОК */
+.points-table-header {
+    background-color: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
+    color: #64748b;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif; /* Заголовок шрифтом інтерфейсу */
+    font-size: 0.75em;
+    font-weight: 700;
+    text-transform: uppercase;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* РЯДОК ДАНИХ */
+.point-list-row {
+    border-bottom: 1px solid #f1f5f9;
+    background-color: #fff;
+    font-size: 0.9em;
+    color: #334155;
+    cursor: pointer;
+    transition: background 0.1s;
+    /* ЗАБОРОНА ПЕРЕНОСУ РЯДКІВ */
+    white-space: nowrap; 
+}
+
+/* "Зебра" для кращого читання довгих таблиць */
+.point-list-row:nth-child(even) {
+    background-color: #fafafa;
+}
+
+.point-list-row:hover {
+    background-color: #f1f5f9; /* Slate-100 */
+}
+
+.point-list-row.active-row {
+    background-color: #eff6ff !important; /* Blue-50 */
+    border-left: 3px solid var(--primary-color);
+    padding-left: 13px; /* Компенсація бордера */
+}
+
+/* КОЛОНКИ */
+.col-idx {
+    color: #94a3b8;
+    text-align: center;
+    font-size: 0.85em;
+    font-family: sans-serif;
+}
+
+.col-time {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.col-val {
+    text-align: right;
+    color: #475569;
+}
+.col-val.faded { color: #cbd5e1; font-weight: 300; }
+
+/* Обгортка для бейджа, щоб він був справа */
+.col-diff-wrapper {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+/* ПРОФЕСІЙНІ БЕЙДЖІ (Compact) */
+.status-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end; /* Цифри притиснуті вправо всередині бейджа */
+    gap: 8px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 600;
+    min-width: 90px;
+    line-height: 1;
+}
+
+/* Кольори статусів (Analyst Palette) */
+.tag-neutral {
+    background: #f1f5f9; color: #94a3b8; /* Сірий */
+}
+.tag-warning {
+    background: #fffbeb; color: #b45309; border: 1px solid #fcd34d; /* Жовтий */
+}
+.tag-danger {
+    background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; /* Червоний */
+}
+.tag-success {
+    background: #f0fdf4; color: #166534; border: 1px solid #86efac; /* Зелений */
+}

@@ -1,8 +1,8 @@
 // js/services/mapService.js
 import * as markerRenderer from '../map/markerRenderer.js';
 import * as colorUtils from '../utils/colorUtils.js';
-import { getRouteData } from '../api/routingService.js'; // ✅ Виправлено імпорт
-import { anomalyService } from './anomalyService.js';
+import { getRouteData } from '../api/routingService.js'; // Змінено імпорт
+import { anomalyService } from './anomalyService.js'; // Підключено сервіс
 
 export const mapService = {
     map: null,
@@ -24,24 +24,21 @@ export const mapService = {
             store.routeColorMap.set(route.id, color);
 
             if (route.isVisible) {
-                // ✅ 1. Отримуємо дані OSRM (якщо ще немає)
+                // 1. Отримуємо дані маршруту (якщо їх немає)
                 if (!route.osrmCoordinates || !route.osrmLegs) {
                     const latLngs = route.normalizedPoints.map(p => [p.latitude, p.longitude]);
+                    const data = await getRouteData(latLngs, store.vehicleType);
                     
-                    // Викликаємо оновлений сервіс
-                    const osrmResult = await getRouteData(latLngs, store.vehicleType);
-                    
-                    // Зберігаємо в маршрут
-                    route.osrmCoordinates = osrmResult.coordinates;
-                    route.osrmLegs = osrmResult.legs;
+                    route.osrmCoordinates = data.coordinates;
+                    route.osrmLegs = data.legs;
                 }
 
-                // ✅ 2. Розраховуємо аномалії (якщо сервіс доступний)
-                if (typeof anomalyService !== 'undefined' && anomalyService.calculate) {
-                    anomalyService.calculate(route, store.anomalyThresholds);
+                // 2. Рахуємо аномалії
+                if (anomalyService) {
+                    anomalyService.calculate(route, store.anomalyThresholds || { warning: 20, danger: 100 });
                 }
 
-                // ✅ 3. Рендеримо
+                // 3. Рендеримо
                 await markerRenderer.renderMarkers(
                     route, 
                     this.map, 
@@ -50,22 +47,19 @@ export const mapService = {
                     store.globalDateFilter, 
                     { index, total: visibleRoutes.length }, 
                     store.vehicleType,
-                    onPointMove // Передаємо callback
+                    onPointMove
                 );
                 index++;
             }
         }
     },
 
-    // Оновлення геометрії при переміщенні точки
     async refreshRouteGeometry(store, routeId, onPointMove) {
         const route = store.routes.get(routeId);
-        if (route) {
-            // Скидаємо кеш, щоб змусити перерахувати маршрут
+        if(route) {
             route.osrmCoordinates = null; 
             route.osrmLegs = null;
         }
-        // Передаємо onPointMove далі, щоб нові маркери знову були інтерактивними
         await this.renderAll(store, onPointMove); 
     },
 
@@ -76,30 +70,26 @@ export const mapService = {
 
         for (const route of store.routes.values()) {
              if (route.isVisible) {
-                // Перерахунок аномалій
-                if (typeof anomalyService !== 'undefined' && anomalyService.calculate) {
-                    anomalyService.calculate(route, store.anomalyThresholds);
-                }
-                
+                if (anomalyService) anomalyService.calculate(route, store.anomalyThresholds);
                 const color = store.routeColorMap.get(route.id);
-                // Перерендер
+                
                 await markerRenderer.renderMarkers(
                     route, this.map, color, store.isClusteringEnabled, 
                     store.globalDateFilter, { index, total: visibleRoutes.length },
                     store.vehicleType,
-                    null 
+                    null
                 );
                 index++;
              }
         }
     },
-
+    
+    // Zoom методи без змін
     zoomToRoute(route) {
         if (!route || !route.isVisible || route.normalizedPoints.length === 0) return;
         const latlngs = route.normalizedPoints.map(p => [p.latitude, p.longitude]);
         this.map.fitBounds(L.latLngBounds(latlngs), { padding: [50, 50] });
     },
-
     zoomToFiltered(route, dateFilter) {
         if (!route || !route.isVisible) return;
         let points = route.normalizedPoints;
