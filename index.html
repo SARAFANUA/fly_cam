@@ -8,15 +8,20 @@
     <link rel="icon" href="favicon.png" type="image/png">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 
     <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="css/base.css">
+
+    <link rel="stylesheet" href="css/buttons.css">
+    <link rel="stylesheet" href="css/forms.css">
+    <link rel="stylesheet" href="css/panels.css">
+    <link rel="stylesheet" href="css/modals.css">
+    <link rel="stylesheet" href="css/tables.css">
+
     <link rel="stylesheet" href="css/sidebar.css">
-    <link rel="stylesheet" href="css/ui.css">
     <link rel="stylesheet" href="css/map.css">
 </head>
 <body>
@@ -77,25 +82,46 @@
 
                 </div>
 
-                <div id="file-list-container" class="file-list-container">
+                <div class="sidebar-panels" id="sidebar-panels">
+                <div id="file-list-container" class="file-list-container panel panel-top">
+                    <div class="panel-head">
                     <h3>Завантажені маршрути:</h3>
+                    <button class="panel-collapse-btn" data-target="file-list-container" title="Згорнути/розгорнути">
+                        <i class="fa-solid fa-chevron-up"></i>
+                    </button>
+                    </div>
+                    <div class="panel-body">
                     <ul id="route-items"></ul>
+                    </div>
                 </div>
 
-                <div id="points-list-container" class="points-list-container">
+                <div class="panel-splitter" id="sidebar-splitter" title="Перетягуйте для зміни висоти"></div>
+
+                <div id="points-list-container" class="points-list-container panel panel-bottom">
+                    <div class="panel-head">
                     <div class="points-list-header">
                         <h3>Деталі: <span id="points-list-routename"></span></h3>
                         <div class="points-header-actions" style="display:flex; gap:8px;">
-                            <button id="open-details-modal-btn" title="Відкрити список точок">
-                                <i class="fa-solid fa-list-ul"></i>
-                            </button>
+                        <button id="open-details-modal-btn" title="Відкрити список точок">
+                            <i class="fa-solid fa-list-ul"></i>
+                        </button>
                         </div>
                     </div>
+
+                    <button class="panel-collapse-btn" data-target="points-list-container" title="Згорнути/розгорнути">
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    </div>
+
+                    <div class="panel-body">
                     <div id="points-list-summary" class="sticky-summary"></div>
                     <ul id="points-list-items">
                         <li class="empty-list-item">Оберіть маршрут для перегляду</li>
                     </ul>
+                    </div>
                 </div>
+                </div>
+
             </div>
 
             <div class="sidebar-footer">
@@ -142,7 +168,11 @@
                     <button id="modal-close-btn" class="modal-close-btn">&times;</button>
                 </div>
             </div>
-            <div class="modal-body" id="modal-body"></div>
+            
+            <div class="modal-body" id="modal-body">
+                <ul id="modal-points-list"></ul>
+            </div>
+            
             <div class="resizer" id="resizer"></div>
         </div>
     </div>

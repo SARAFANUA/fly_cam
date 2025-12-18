@@ -12,7 +12,7 @@ export function renderPointsList(route, state, uiRefs, actions) {
 
     uiRefs.routeTitle.textContent = route.fileName;
     
-    // Фільтрація точок (якщо є глобальний фільтр)
+    // Фільтрація точок
     let pointsToDisplay = route.normalizedPoints;
     if (state.globalDateFilter.size > 0 && !route.isLocked) {
         pointsToDisplay = route.normalizedPoints.filter(p => {
@@ -27,14 +27,14 @@ export function renderPointsList(route, state, uiRefs, actions) {
     }
 
     // 1. ЗАГОЛОВОК ТАБЛИЦІ
-    // Вирівнювання match'иться з CSS Grid в .points-grid-layout
+    // Додаємо клас points-grid-layout, щоб він мав ту ж саму сітку, що й рядки
     uiRefs.summary.innerHTML = `
         <div class="points-table-header points-grid-layout">
             <span style="text-align: center">#</span>
-            <span>Час</span>
-            <span style="text-align: right">План</span>
-            <span style="text-align: right">Факт</span>
-            <span style="text-align: right; padding-right: 5px;">Відхилення</span>
+            <span>ЧАС</span>
+            <span style="text-align: right">ПЛАН</span>
+            <span style="text-align: right">ФАКТ</span>
+            <span style="text-align: right">ВІДХИЛЕННЯ</span>
         </div>
     `;
     
@@ -43,55 +43,65 @@ export function renderPointsList(route, state, uiRefs, actions) {
 
     pointsToDisplay.forEach((point, index) => {
         const li = document.createElement('li');
+        
+        // Додаємо два класи: 
+        // point-list-row (стилі рядка, ховер, курсор)
+        // points-grid-layout (структура колонок Grid)
         li.className = 'point-list-row points-grid-layout';
         
-        // Дефолтні значення (пустишки)
-        let diffHtml = '<span class="status-tag tag-neutral" style="opacity:0.5; min-width:30px; justify-content:center;">—</span>';
-        let planText = '<span class="col-val faded">—</span>';
-        let factText = '<span class="col-val faded">—</span>';
+        // --- Логіка відображення даних ---
+        let anomalyClass = '';
+        let diffHtml = '<span class="status-tag tag-neutral" style="justify-content:center;">—</span>';
+        let planText = '<span class="faded">—</span>';
+        let factText = '<span class="faded">—</span>';
 
-        // Якщо є розраховані дані таймінгу
         if (point.timingInfo) {
             const { expected, actual, diff, percent } = point.timingInfo;
             
-            // Чистий текст для колонок План/Факт
             planText = formatDuration(expected);
             factText = formatDuration(actual);
             
             const sign = diff > 0 ? '+' : '';
             const absPercent = Math.abs(Math.round(percent));
             
-            // Логіка вибору стилю бейджа (Tag)
-            let tagClass = 'tag-success'; // Зелений за замовчуванням (швидше або вчасно)
+            // Вибір кольору бейджа
+            let tagClass = 'tag-success'; 
             
-            if (diff > 0) {
-                // Затримка
-                if (point.anomalyLevel === 'high') tagClass = 'tag-danger';      // Червоний
-                else if (point.anomalyLevel === 'medium') tagClass = 'tag-warning'; // Жовтий
-                else tagClass = 'tag-neutral'; // Незначне відхилення
+            if (diff > 0) { // Затримка
+                if (point.anomalyLevel === 'high') {
+                    tagClass = 'tag-danger';
+                    anomalyClass = 'row-danger'; // Підсвітка всього рядка
+                } else if (point.anomalyLevel === 'medium') {
+                    tagClass = 'tag-warning';
+                    anomalyClass = 'row-warning';
+                } else {
+                    tagClass = 'tag-neutral';
+                }
             }
 
             // Формуємо бейдж
-            // Використовуємо &nbsp; для фіксованого відступу цифр
             diffHtml = `
                 <div class="status-tag ${tagClass}">
                     <span>${sign}${formatDuration(diff)}</span>
-                    <small>${sign}${absPercent}%</small>
+                    <small>${absPercent}%</small>
                 </div>
             `;
         }
+
+        // Якщо є аномалія, додаємо клас підсвітки рядка
+        if (anomalyClass) li.classList.add(anomalyClass);
 
         const timeStr = new Date(point.timestamp).toLocaleTimeString('uk-UA', {
             hour: '2-digit', 
             minute: '2-digit'
         });
 
-        // HTML структура рядка
+        // HTML структура (Grid Cell -> Content)
         li.innerHTML = `
             <span class="col-idx">${index + 1}</span>
             <span class="col-time">${timeStr}</span>
             <span class="col-val">${planText}</span>
-            <span class="col-val" style="font-weight:600; color:#1e293b;">${factText}</span>
+            <span class="col-val" style="font-weight:700; color:#1e293b;">${factText}</span>
             <div class="col-diff-wrapper">${diffHtml}</div>
         `;
 
@@ -102,8 +112,6 @@ export function renderPointsList(route, state, uiRefs, actions) {
             const active = uiRefs.list.querySelector('.active-row');
             if (active) active.classList.remove('active-row');
             li.classList.add('active-row');
-            
-            // Плавний скрол до елемента, якщо він частково схований
             li.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             
             actions.onPointClick(route.id, originalIndex);
@@ -115,7 +123,7 @@ export function renderPointsList(route, state, uiRefs, actions) {
     uiRefs.list.appendChild(fragment);
 }
 
-// Функція для дат (renderUniqueDates) залишається без змін...
+// renderUniqueDates залишається без змін...
 export function renderUniqueDates(container, state, actions) {
     const dateCounts = new Map();
     const sourcePoints = state.routes.size > 0

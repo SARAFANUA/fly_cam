@@ -1,0 +1,99 @@
+/* css/forms.css */
+
+/* --- Toggles (Перемикачі) --- */
+.toggle-switch { position: relative; display: inline-block; width: 52px; height: 28px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #cbd5e1; transition: all var(--transition-normal);
+    border-radius: 28px; box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.slider:before {
+    position: absolute; content: ""; height: 22px; width: 22px;
+    left: 3px; bottom: 3px; background-color: white; transition: all var(--transition-normal);
+    border-radius: 50%; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+input:checked + .slider { background: linear-gradient(135deg, var(--primary-color), var(--primary-color-light)); }
+input:checked + .slider:before { transform: translateX(24px); }
+
+/* Small Toggle */
+.toggle-switch-small { position: relative; display: inline-block; width: 34px; height: 20px; }
+.toggle-switch-small input { opacity: 0; width: 0; height: 0; }
+.slider-small {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc; transition: .4s; border-radius: 20px;
+}
+.slider-small:before {
+    position: absolute; content: ""; height: 14px; width: 14px;
+    left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%;
+}
+input:checked + .slider-small { background-color: var(--primary-color); }
+input:checked + .slider-small:before { transform: translateX(14px); }
+
+/* --- Inputs & Selects --- */
+.field-group { margin-bottom: 15px; }
+
+.field-label {
+    display: block; margin-bottom: 6px; font-size: 0.85em;
+    font-weight: 600; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.03em;
+}
+.field-label .hint {
+    font-size: 0.8em; text-transform: none; font-weight: 400;
+    color: var(--success-color); opacity: 0.8;
+}
+
+.styled-input, .styled-select {
+    width: 100%; padding: 10px 12px;
+    border-radius: 8px; border: 1px solid #e2e8f0;
+    background-color: white; font-size: 0.95em;
+    color: var(--text-primary); transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    box-sizing: border-box;
+}
+.styled-input:focus, .styled-select:focus {
+    outline: none; border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+.styled-input::placeholder { color: #9ca3af; }
+
+/* Input wrapper w/ Icon */
+.input-wrapper { position: relative; width: 100%; }
+.input-icon {
+    position: absolute; left: 12px; top: 50%;
+    transform: translateY(-50%); color: #9ca3af; pointer-events: none;
+}
+.input-wrapper .styled-input { padding-left: 36px; }
+
+/* Старі стилі полів (для сумісності) */
+.field { display: block; margin: 8px 0; }
+.field input, .field select {
+  width: 100%; padding: 8px 10px; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.12); background: rgba(0,0,0,.25);
+  color: inherit; outline: none;
+}
+
+/* --- Autocomplete Dropdown --- */
+.autocomplete-dropdown {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 3000;
+    background: white; border: 1px solid var(--border-color);
+    border-radius: 0 0 8px 8px; max-height: 250px; overflow-y: auto;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    display: none; margin-top: 2px;
+}
+.autocomplete-item {
+    padding: 10px 12px; font-size: 0.9em; color: var(--text-primary);
+    cursor: pointer; border-bottom: 1px solid #f1f5f9;
+    transition: background-color 0.15s ease; display: flex; flex-direction: column;
+}
+.autocomplete-item:last-child { border-bottom: none; }
+.autocomplete-item:hover, .autocomplete-item.focused {
+    background-color: #eff6ff; color: var(--primary-color-dark);
+}
+.autocomplete-meta { font-size: 0.75em; color: #94a3b8; margin-top: 2px; }
+
+/* Scrollbar styling */
+.autocomplete-dropdown::-webkit-scrollbar { width: 6px; }
+.autocomplete-dropdown::-webkit-scrollbar-track { background: #f1f1f1; }
+.autocomplete-dropdown::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+.autocomplete-dropdown::-webkit-scrollbar-thumb:hover { background: #94a3b8; }

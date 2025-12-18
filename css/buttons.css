@@ -1,0 +1,50 @@
+/* css/buttons.css */
+
+/* Велика кнопка вибору файлів */
+.select-files-btn {
+    display: block; margin: 0 auto 8px auto; padding: 10px 24px;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-light));
+    color: white; border: none; border-radius: 8px; cursor: pointer;
+    box-shadow: var(--shadow-md); font-weight: 600; font-size: 0.95em;
+    transition: all var(--transition-fast); position: relative; overflow: hidden;
+}
+.select-files-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+
+/* Кнопка відкриття модалки (в сайдбарі) */
+#open-details-modal-btn {
+    background: none; border: 1px solid #ccc; border-radius: 5px; cursor: pointer;
+    font-size: 16px; padding: 2px 6px; line-height: 1;
+}
+#open-details-modal-btn:hover:not(:disabled) { background-color: #f0f0f0; }
+
+/* Другорядні кнопки */
+.btn-secondary {
+    width: 100%; margin-top: 8px; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.06);
+    color: inherit; cursor: pointer;
+}
+.btn-secondary:hover { background: rgba(255,255,255,.10); }
+
+/* Кнопка скидання фільтрів (червона/світла) */
+.btn-reset {
+    width: 100%; margin-top: 10px; padding: 12px;
+    border-radius: 8px; border: none;
+    background-color: #fee2e2; color: #dc2626;
+    font-weight: 600; cursor: pointer;
+    transition: background 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-reset:hover { background-color: #fecaca; }
+
+/* Маленький хрестик для повідомлень */
+.filter-reset-btn {
+    background: none; border: 1px solid currentColor; color: inherit;
+    opacity: 0.7; border-radius: 50%; width: 22px; height: 22px;
+    line-height: 18px; text-align: center; cursor: pointer; font-weight: bold;
+    padding: 0; margin-left: 10px; flex-shrink: 0;
+}
+
+/* Кнопка закриття модального вікна */
+.modal-close-btn { 
+    background: none; border: none; font-size: 24px; cursor: pointer; padding: 0 5px; 
+}

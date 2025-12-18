@@ -1,0 +1,63 @@
+/* css/modals.css */
+
+/* Контейнер модалки */
+.modal-container {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 2000; transition: opacity 0.3s; pointer-events: none;
+}
+.modal-container.hidden { display: none; }
+
+/* Оверлей (фон) */
+.modal-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); transition: background-color 0.3s;
+}
+.modal-overlay.hidden { background-color: transparent; }
+
+/* Режими прозорості */
+.modal-overlay.transparent { background-color: transparent; pointer-events: none; }
+.modal-overlay.dimmed { background-color: rgba(0, 0, 0, 0.6); pointer-events: auto; }
+
+/* Саме вікно */
+.modal-content {
+    background-color: white; border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 2001;
+    width: 90%; max-width: 600px; display: flex; flex-direction: column;
+    max-height: 90vh; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%); pointer-events: auto; overflow: hidden;
+    min-width: 350px; min-height: 300px;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+.modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 15px 20px; border-bottom: 1px solid #ddd;
+    cursor: move; background-color: #f7f7f7; border-radius: 10px 10px 0 0;
+}
+
+.modal-body {
+    overflow-y: auto; padding: 0; display: flex; flex-direction: column; flex-grow: 1;
+}
+
+/* Ресайзер (кут) */
+.resizer {
+    position: absolute; right: 0; bottom: 0; width: 15px; height: 15px; cursor: se-resize;
+    background: repeating-linear-gradient(-45deg, #ccc, #ccc 1px, transparent 1px, transparent 4px);
+}
+
+/* --- Global Drop Overlay (на весь екран) --- */
+#global-drop-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(37, 99, 235, 0.85);
+    z-index: 9999; display: flex; justify-content: center; align-items: center;
+    transition: opacity 0.2s; backdrop-filter: blur(4px);
+}
+#global-drop-overlay.hidden { display: none; }
+
+.drop-message {
+    color: white; text-align: center;
+    border: 3px dashed rgba(255,255,255,0.7);
+    padding: 40px; border-radius: 20px;
+}
+.drop-message i { font-size: 64px; margin-bottom: 20px; }
+.drop-message p { font-size: 24px; font-weight: bold; margin: 0; }

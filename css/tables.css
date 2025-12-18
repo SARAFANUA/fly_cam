@@ -1,0 +1,104 @@
+/* css/tables.css */
+
+/* Скидання стилів списку */
+#modal-points-list {
+    display: block !important;
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+}
+
+/* ЄДИНА СІТКА ДЛЯ ЗАГОЛОВКА І РЯДКІВ 
+   Налаштування колонок:
+   Index | Time | Plan | Fact | Diff (Fixed width for badges)
+*/
+.points-grid-layout {
+    display: grid !important;
+    grid-template-columns: 40px 60px 1fr 1fr 110px !important;
+    gap: 10px !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    padding: 8px 12px !important;
+}
+
+/* Стиль Хедера (Заголовка) */
+.points-table-header {
+    background-color: #f1f5f9;
+    border-bottom: 2px solid #cbd5e1;
+    color: #64748b;
+    font-size: 0.75em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    position: sticky;
+    top: 0;
+    z-index: 100; /* Щоб був поверх скролу */
+}
+
+/* Стиль Рядка */
+.point-list-row {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.9em;
+    color: #334155;
+    cursor: pointer;
+    
+    /* ВАЖЛИВО: Заборона переносу тексту, щоб таблиця не стрибала */
+    white-space: nowrap !important;
+    overflow: hidden !important; 
+}
+
+/* Зебра і Ховер */
+.point-list-row:nth-child(even) { background-color: #fafafa; }
+.point-list-row:hover { background-color: #f1f5f9; }
+
+/* Активний рядок */
+.point-list-row.active-row {
+    background-color: #eff6ff !important;
+    box-shadow: inset 3px 0 0 var(--primary-color);
+}
+
+/* Підсвітка аномалій */
+.row-warning { background-color: #fffbeb !important; } 
+.row-danger { background-color: #fef2f2 !important; }
+
+/* --- Колонка: Індекс --- */
+.col-idx {
+    color: #94a3b8; text-align: center; font-size: 0.85em;
+}
+
+/* --- Колонка: Час --- */
+.col-time {
+    font-weight: 600; color: #0f172a;
+    font-family: 'Roboto Mono', 'SF Mono', monospace;
+}
+
+/* --- Колонка: Значення --- */
+.col-val {
+    text-align: right;
+    font-family: 'Roboto Mono', monospace;
+    color: #475569;
+}
+.col-val.faded { color: #cbd5e1; font-weight: 300; }
+
+/* --- Колонка: Різниця (Wrapper) --- */
+.col-diff-wrapper {
+    display: flex; justify-content: flex-end; align-items: center;
+}
+
+/* --- Бейджі (Tag) --- */
+.status-tag {
+    display: inline-flex; align-items: center; justify-content: flex-end;
+    gap: 6px; padding: 2px 6px; border-radius: 4px;
+    font-size: 0.85em; font-family: 'Roboto Mono', monospace;
+    font-weight: 500; min-width: 85px; border: 1px solid transparent;
+}
+.status-tag small { font-size: 0.85em; opacity: 0.7; font-weight: 400; }
+
+/* Кольори статусів */
+.tag-neutral { background: #f1f5f9; color: #94a3b8; }
+.tag-warning { background: #fffbeb; color: #b45309; border-color: #fcd34d; }
+.tag-danger  { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+.tag-success { background: #f0fdf4; color: #166534; border-color: #86efac; }
