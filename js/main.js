@@ -1,111 +1,16 @@
 // js/main.js
 import { initializeMap } from './map/mapInitializer.js';
-import * as markerRenderer from './map/markerRenderer.js';
 import * as cameraRenderer from './map/cameraRenderer.js';
-import { fetchCameras } from './api/camerasApi.js';
 import { initCameraPanel } from './ui/cameraPanel.js';
-
 import { store } from './state/store.js';
-import { getElements, showMessage } from './ui/dom.js';
+import { getElements } from './ui/dom.js';
 import { mapService } from './services/mapService.js';
 import { fileService } from './services/fileService.js';
-import { sidebarUI } from './ui/sidebarUI.js';
+
+// Імпортуємо контролер
+import * as AppController from './controllers/appController.js';
 
 let map;
-
-async function updateApp() {
-    // Повний рендер (використовується при завантаженні файлів, зміні фільтрів, видаленні маршрутів)
-    await mapService.renderAll(store, handlePointMove);
-    
-    const ui = getElements();
-    
-    sidebarUI.renderRoutes(ui.routeList, store, {
-        onSelect: selectRoute,
-        onLock: id => { 
-            const r = store.routes.get(id); 
-            if(r) { r.isLocked = !r.isLocked; updateApp(); } 
-        },
-        onToggle: id => { 
-            const r = store.routes.get(id); 
-            if(r) { r.isVisible = !r.isVisible; updateApp(); } 
-        },
-        onRemove: removeRoute
-    });
-
-    sidebarUI.renderDates(ui.uniqueDatesList, store, {
-        onDateClick: handleDateFilter
-    });
-
-    updateDetails();
-}
-
-// Обробник переміщення точки (оновлює тільки геометрію для швидкодії)
-async function handlePointMove(routeId, originalIndex, newLat, newLng) {
-    const route = store.routes.get(routeId);
-    if (!route) return;
-
-    // 1. Оновлюємо дані в Store
-    if (route.normalizedPoints[originalIndex]) {
-        route.normalizedPoints[originalIndex].latitude = newLat;
-        route.normalizedPoints[originalIndex].longitude = newLng;
-        
-        console.log(`Точку ${originalIndex + 1} оновлено. Перебудова геометрії...`);
-        
-        // 2. Часткове оновлення карти (тільки лінія)
-        await mapService.refreshRouteGeometry(store, routeId);
-
-        // 3. Оновлення деталей у сайдбарі
-        updateDetails(); 
-    }
-}
-
-function updateDetails() {
-    const ui = getElements();
-    sidebarUI.renderPoints(ui, store, {
-        onPointClick: (rid, idx) => markerRenderer.highlightSegment(rid, idx)
-    });
-}
-
-function selectRoute(id) {
-    store.activeRouteId = id;
-    updateApp();
-    const route = store.routes.get(id);
-    if(store.globalDateFilter.size > 0) mapService.zoomToFiltered(route, store.globalDateFilter);
-    else mapService.zoomToRoute(route);
-}
-
-function removeRoute(id) {
-    store.routes.delete(id);
-    store.routeColorMap.delete(id);
-    if(store.activeRouteId === id) store.activeRouteId = null;
-    if(store.routes.size === 0) store.globalDateFilter.clear();
-    updateApp();
-}
-
-// Логіка вибору дат (Ctrl/Cmd замість Shift)
-function handleDateFilter(date, event) {
-    // Використовуємо ctrlKey (Windows/Linux) або metaKey (macOS Command)
-    if (event.ctrlKey || event.metaKey) {
-        store.globalDateFilter.has(date) ? store.globalDateFilter.delete(date) : store.globalDateFilter.add(date);
-    } else {
-        // Звичайний клік - вибираємо одну дату, повторний клік - знімаємо виділення
-        if (store.globalDateFilter.has(date) && store.globalDateFilter.size === 1) {
-            store.globalDateFilter.clear();
-        } else { 
-            store.globalDateFilter.clear(); 
-            store.globalDateFilter.add(date); 
-        }
-    }
-    
-    updateApp();
-    
-    if (store.activeRouteId) {
-        mapService.zoomToFiltered(store.routes.get(store.activeRouteId), store.globalDateFilter);
-    }
-    
-    const msg = store.globalDateFilter.size > 0 ? `Фільтр: ${store.globalDateFilter.size} дат` : 'Фільтр скинуто';
-    showMessage(msg, 'info', () => { store.globalDateFilter.clear(); updateApp(); });
-}
 
 document.addEventListener('DOMContentLoaded', () => {
     map = initializeMap();
@@ -115,6 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initCameraPanel(map);
 
     const ui = getElements();
+
+    // --- UI Event Listeners ---
 
     ui.sidebarToggleBtn.onclick = () => {
         ui.sidebar.classList.toggle('collapsed');
@@ -147,12 +54,19 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.selectFilesBtn.onclick = () => ui.fileInput.click();
     }
 
+    // Обробка файлів
+    const handleFileProcess = async (files) => {
+        for(const f of files) {
+            await fileService.processFile(f, store, {
+                renderAll: () => AppController.updateApp(),
+                onSelect: AppController.selectRoute,
+                onResetFilter: () => store.globalDateFilter.clear()
+            });
+        }
+    };
+
     ui.fileInput.onchange = async (e) => {
-        for(const f of e.target.files) await fileService.processFile(f, store, {
-            renderAll: () => updateApp(),
-            onSelect: selectRoute,
-            onResetFilter: () => store.globalDateFilter.clear()
-        });
+        await handleFileProcess(e.target.files);
         e.target.value = '';
     };
 
@@ -178,15 +92,8 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         dragCounter = 0;
         dropOverlay.classList.add('hidden');
-
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            for(const f of e.dataTransfer.files) {
-                await fileService.processFile(f, store, {
-                    renderAll: () => updateApp(),
-                    onSelect: selectRoute,
-                    onResetFilter: () => store.globalDateFilter.clear()
-                });
-            }
+            await handleFileProcess(e.dataTransfer.files);
         }
     });
 
@@ -196,14 +103,13 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.dropArea.ondrop = async (e) => { e.preventDefault(); ui.dropArea.classList.remove('highlight'); };
     }
 
-    // Modal Overlay
+    // Modal
     const overlay = ui.modalOverlay;
     const toggleOverlayBtn = document.getElementById('toggle-overlay-btn');
 
     if (toggleOverlayBtn && overlay) {
         overlay.classList.add('transparent');
         toggleOverlayBtn.checked = false;
-
         toggleOverlayBtn.addEventListener('change', (e) => {
             if (e.target.checked) {
                 overlay.classList.remove('transparent');
@@ -213,7 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 overlay.classList.add('transparent');
             }
         });
-        
         overlay.addEventListener('click', () => {
             if (overlay.classList.contains('dimmed')) ui.closeModalBtn.click();
         });
@@ -233,16 +138,17 @@ document.addEventListener('DOMContentLoaded', () => {
     
     ui.closeModalBtn.onclick = () => ui.modalContainer.classList.add('hidden');
 
+    // Налаштування
     if(ui.toggleClustering) ui.toggleClustering.onchange = () => {
         store.isClusteringEnabled = ui.toggleClustering.checked;
-        updateApp();
+        AppController.updateApp();
     };
     if(ui.vehicleSelect) ui.vehicleSelect.onchange = () => {
         store.vehicleType = ui.vehicleSelect.value;
-        updateApp();
+        AppController.updateApp();
     };
 
-    // ✅ НОВЕ: Обробка налаштувань аномалій
+    // Аномалії
     const warnInput = document.getElementById('anomaly-warning-input');
     const dangerInput = document.getElementById('anomaly-danger-input');
 
@@ -250,7 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
         warnInput.value = store.anomalyThresholds.warning;
         warnInput.onchange = (e) => {
             store.anomalyThresholds.warning = Number(e.target.value);
-            // Швидке оновлення аналітики без запитів до OSRM
             mapService.updateAnalyticsOnly(store);
         };
     }
@@ -263,31 +168,9 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
     
-    window.reloadCameras = async (filters, clusteringOverride = null) => {
-        try {
-            const data = await fetchCameras({ ...filters, limit: 10000 });
-            const items = data?.items || [];
-            
-            let isClustering;
-            if (clusteringOverride !== null && clusteringOverride !== undefined) {
-                isClustering = clusteringOverride;
-            } else {
-                const state = cameraRenderer.getState();
-                isClustering = state.isClusteringEnabled;
-            }
+    // Глобальна функція для камер (використовується в cameraPanel.js)
+    window.reloadCameras = AppController.reloadCameras;
 
-            cameraRenderer.renderCameras(items, isClustering);
-            
-            const hint = document.getElementById('camera-panel-hint');
-            if(hint) {
-                const suffix = filters.bbox ? ' (у видимій області)' : '';
-                hint.textContent = `Знайдено камер: ${items.length}${suffix}`;
-            }
-        } catch (e) {
-            console.error("Помилка завантаження камер:", e);
-            showMessage("Не вдалося завантажити камери", "error");
-        }
-    };
-
-    updateApp();
+    // Запуск
+    AppController.updateApp();
 });
