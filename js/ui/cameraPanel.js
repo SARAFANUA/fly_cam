@@ -5,7 +5,8 @@ import { initCameraFilters } from './cameraFilters.js';
 import { getElements } from './dom.js';
 
 let mapInstance = null;
-let camerasVisible = true;
+// 1. ЗМІНА: За замовчуванням false (вимкнено)
+let camerasVisible = false; 
 let cameraClusteringEnabled = true;
 let lastFilters = {};
 
@@ -18,7 +19,7 @@ function buildCameraPanelHtml() {
         <div class="control-row">
            <span class="control-label"><i class="fa-solid fa-eye"></i> Відображати камери</span>
            <label class="toggle-switch-small">
-              <input type="checkbox" id="toggle-cameras-visibility-btn" checked>
+              <input type="checkbox" id="toggle-cameras-visibility-btn"> 
               <span class="slider-small"></span>
            </label>
         </div>
@@ -104,13 +105,11 @@ function buildCameraPanelHtml() {
 
 // --- Створення фіксованого футера для кнопки ---
 function ensureSyncButtonFooter(sidebarContent) {
-    // Перевіряємо, чи футер вже є, щоб не дублювати
     if (document.getElementById('camera-sidebar-footer')) return;
 
     const footer = document.createElement('div');
     footer.id = 'camera-sidebar-footer';
     
-    // HTML кнопки
     footer.innerHTML = `
         <button id="sync-db-btn" type="button">
             <i class="fa-solid fa-rotate"></i> Оновити базу камер
@@ -118,10 +117,8 @@ function ensureSyncButtonFooter(sidebarContent) {
         <div id="sync-status" style="font-size: 0.75em; color: #888; margin-top: 5px; text-align: center;"></div>
     `;
     
-    // Вставляємо футер ПІСЛЯ контейнера скролу, але ВСЕРЕДИНУ sidebarContent
     sidebarContent.appendChild(footer);
 
-    // Додаємо логіку кліку
     const syncBtn = footer.querySelector('#sync-db-btn');
     const syncStatus = footer.querySelector('#sync-status');
 
@@ -140,7 +137,6 @@ function ensureSyncButtonFooter(sidebarContent) {
                 const count = data.rows_upserted || 0;
                 syncStatus.textContent = `Успішно! Оновлено: ${count} камер.`;
                 syncStatus.style.color = 'green';
-                // Оновлюємо карту
                 reloadWithCurrentSettings().catch(console.error);
             } else {
                 throw new Error(data.error || 'Помилка сервера');
@@ -162,6 +158,9 @@ async function reloadWithCurrentSettings() {
 
   if (!camerasVisible) {
     cameraRenderer.clearAllCameras();
+    // Очищаємо підказку про кількість камер
+    const hint = document.getElementById('camera-panel-hint');
+    if (hint) hint.textContent = '';
     return;
   }
 
@@ -199,19 +198,15 @@ export function initCameraPanel(map) {
   mapInstance = map;
   const ui = getElements();
 
-  // Рендеримо фільтри (Скрол зона)
   if (ui.cameraFiltersContainer) {
       ui.cameraFiltersContainer.innerHTML = buildCameraPanelHtml();
   }
 
-  // Створюємо Футер (Фіксована зона)
-  // Шукаємо батьківський елемент sidebar-content у правому сайдбарі
   const sidebarContent = ui.sidebarRight.querySelector('.sidebar-content');
   if (sidebarContent) {
       ensureSyncButtonFooter(sidebarContent);
   }
 
-  // Кнопки відкриття/закриття
   if (ui.openCameraPanelBtn) {
       ui.openCameraPanelBtn.onclick = () => togglePanel(true);
   }
@@ -219,10 +214,8 @@ export function initCameraPanel(map) {
       ui.closeCameraPanelBtn.onclick = () => togglePanel(false);
   }
 
-  // Слухач руху карти (BBOX)
   let moveTimeout;
   map.on('moveend', () => {
-      // Оновлюємо, якщо камери увімкнені (незалежно від стану сайдбару)
       if (camerasVisible) {
           clearTimeout(moveTimeout);
           moveTimeout = setTimeout(() => {
@@ -231,20 +224,21 @@ export function initCameraPanel(map) {
       }
   });
 
-  // Ініціалізація логіки фільтрів
   initCameraFilters({ 
       onChange: (filters) => {
           lastFilters = filters;
-          reloadWithCurrentSettings().catch(console.error);
+          if (camerasVisible) {
+              reloadWithCurrentSettings().catch(console.error);
+          }
       }
   });
 
-  // Тумблери (Vis/Cluster)
   const visBtn = document.getElementById('toggle-cameras-visibility-btn');
   const clustBtn = document.getElementById('toggle-camera-clustering-btn');
 
   if (visBtn) {
-      visBtn.checked = camerasVisible;
+      // Синхронізуємо стан чекбокса зі змінною
+      visBtn.checked = camerasVisible; 
       visBtn.onchange = (e) => {
           camerasVisible = e.target.checked;
           if (camerasVisible) reloadWithCurrentSettings();

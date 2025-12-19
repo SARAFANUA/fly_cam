@@ -9,44 +9,87 @@ let lastRendered = {
   isVisible: true,
 };
 
+// Словник нормалізації (такий самий, як на сервері)
+const NORMALIZATION_MAP = {
+  // КА Доступ / Загальні
+  'hi': 'Ні',
+  'ні': 'Ні',
+  'no': 'Ні',
+  'так': 'Так',
+  'yes': 'Так',
+  'true': 'Так',
+  'false': 'Ні',
+  
+  // Статуси
+  'прцює': 'Працює',
+  'працює': 'Працює',
+  'active': 'Працює',
+  'on': 'Працює',
+  'тимчасово не працює': 'Тимчасово не працює',
+  'тимчасово непрацює': 'Тимчасово не працює',
+  'не працює': 'Не працює',
+  'виведена з ладу': 'Виведена з ладу',
+  'відключена': 'Відключена',
+  'знищена': 'Знищена',
+  'демонтована': 'Демонтована',
+
+  // Інтеграція
+  'камера інтегрована до системи': 'Інтегрована',
+  'не інтегрована': 'Не інтегрована'
+};
+
 function safeNum(v) {
   const n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.'));
   return Number.isFinite(n) ? n : null;
 }
 
+// Функція очищення тексту
+function normalizeValue(val) {
+  if (val === null || val === undefined) return '';
+  const str = String(val).trim();
+  const lower = str.toLowerCase();
+  // Якщо є в словнику - повертаємо гарне значення, інакше оригінал
+  return NORMALIZATION_MAP[lower] || str;
+}
+
 // --- НОВА ФУНКЦІЯ POPUP (Картка камери) ---
 function buildPopup(p) {
-  // 1. Логіка статусу
-  const status = (p.camera_status || '').toLowerCase().trim();
+  // 1. Нормалізуємо основні поля
+  const status = normalizeValue(p.camera_status) || 'Невідомо';
+  const kaAccess = normalizeValue(p.ka_access) || '—';
+  const license = normalizeValue(p.license_type);
+  const analytics = normalizeValue(p.analytics_object);
+  const integSystem = p.integrated_systems || ''; // Систему лишаємо як є, це назва
+
+  // 2. Логіка кольору статусу (на основі вже нормалізованого значення)
+  const statusLower = status.toLowerCase();
   let statusClass = 'status-gray';
   let statusIcon = '<i class="fa-solid fa-circle-question"></i>';
 
-  if (status.includes('працює') && !status.includes('не')) {
+  if (statusLower.includes('працює')) {
       statusClass = 'status-green'; 
       statusIcon = '<i class="fa-solid fa-check-circle"></i>';
-  } else if (status.includes('не працює') || status.includes('тимчасово')) {
+  } else if (statusLower.includes('не працює') || statusLower.includes('тимчасово') || statusLower.includes('відключена')) {
       statusClass = 'status-yellow';
       statusIcon = '<i class="fa-solid fa-triangle-exclamation"></i>';
+  } else if (statusLower.includes('знищена') || statusLower.includes('демонтована') || statusLower.includes('ладу')) {
+      statusClass = 'status-red'; // Можна додати червоний стиль в CSS
+      statusIcon = '<i class="fa-solid fa-ban"></i>';
   }
 
-  // 2. Формування адреси
+  // 3. Формування адреси
   const settlement = [p.settlement_type, p.settlement_name].filter(Boolean).join(' ');
   const street = p.highway_number 
       ? `🛣️ ${p.highway_number}` 
       : [p.street_type, p.street_name].filter(Boolean).join(' ');
 
-  // 3. Локація (Область, Район, Громада)
+  // 4. Локація (Область, Район, Громада)
   const locationStr = [p.oblast, p.raion ? p.raion + ' р-н' : '', p.hromada ? p.hromada + ' ТГ' : '']
       .filter(Boolean)
       .join(', ');
 
-  // 4. Поля
   const camName = p.camera_name || 'Камера без назви';
   const camId = p.camera_id || 'ID відсутній';
-  const kaAccess = p.ka_access || '—';
-  const integSystem = p.integrated_systems || '';
-  const license = p.license_type || '';
-  const analytics = p.analytics_object || '';
 
   // 5. HTML Шаблон
   return `
@@ -67,7 +110,7 @@ function buildPopup(p) {
               </div>
 
               <div class="popup-badge ${statusClass}">
-                  ${statusIcon} <span>${p.camera_status || 'Статус невідомий'}</span>
+                  ${statusIcon} <span>${status}</span>
               </div>
 
               <div class="popup-grid">
@@ -77,7 +120,7 @@ function buildPopup(p) {
 
               <div class="popup-row access-row">
                   <strong>Доступ КА:</strong> 
-                  <span class="ka-val ${kaAccess.toLowerCase() === 'так' ? 'text-green' : 'text-red'}">${kaAccess}</span>
+                  <span class="ka-val ${kaAccess === 'Так' ? 'text-green' : 'text-red'}">${kaAccess}</span>
               </div>
           </div>
 
@@ -95,10 +138,12 @@ function formatCount(n) {
     return n;
 }
 
-// --- ПОКРАЩЕНА ІКОНКА ---
+// --- ІКОНКА ---
 function buildCameraIcon(camera) {
-  const status = (camera.camera_status || '').toLowerCase();
-  const isActive = status.includes('прац') || status.includes('актив') || status.includes('on');
+  // Використовуємо нормалізований статус і тут для визначення активності
+  const status = normalizeValue(camera.camera_status).toLowerCase();
+  const isActive = status.includes('працює');
+  
   const bgColor = isActive ? '#2563eb' : '#64748b'; 
 
   const azimuth = parseFloat(camera.azimuth);
@@ -106,7 +151,6 @@ function buildCameraIcon(camera) {
 
   let fovHtml = '';
   if (hasAzimuth) {
-      // Збільшуємо розмір SVG до 120px для довгого променя
       fovHtml = `
         <div class="camera-fov-container" style="transform: translate(-50%, -50%) rotate(${azimuth}deg);">
             <svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
@@ -194,7 +238,6 @@ export function setMapInstance(map) {
       const zoom = map.getZoom();
       const container = map.getContainer();
       
-      // Показуємо конуси тільки якщо зум >= 14 (вулиці)
       if (zoom >= 14) {
           container.classList.add('map-show-fov');
       } else {
@@ -202,10 +245,7 @@ export function setMapInstance(map) {
       }
   };
 
-  // Слухаємо зміну зуму
   map.on('zoomend', updateFovVisibility);
-  
-  // Викликаємо одразу для ініціалізації
   updateFovVisibility();
 }
 
