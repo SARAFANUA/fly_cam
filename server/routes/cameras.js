@@ -1,19 +1,20 @@
 // server/routes/cameras.js
 import express from 'express';
 
-// ✅ ДОДАНО: Всі поля, які ми хочемо фільтрувати
 const ALLOWED_FILTERS = new Set([
-  'oblast',
-  'raion',
-  'hromada',
-  'camera_status',
-  'integration_status',
-  'license_type',       // Новий
-  'analytics_object',   // Новий
-  'ka_access',          // Новий
-  'system',             // Новий (спеціальна обробка)
-  'camera_id_like'      // Новий (для пошуку по ID)
+  'oblast', 'raion', 'hromada',
+  'camera_status', 'integration_status',
+  'license_type', 'analytics_object', 'ka_access', 
+  'system', 'camera_id_like'
 ]);
+
+// Мапа нормалізації для зворотнього пошуку (якщо користувач вибрав "Ні", шукаємо і "Ні", і "Hi", і "no")
+const REVERSE_NORM_MAP = {
+    'ні': ['ні', 'hi', 'no'],
+    'так': ['так', 'yes'],
+    'працює': ['працює', 'прцює', 'active'],
+    'тимчасово не працює': ['ТИмчасово не працює', 'тимчасово не працює','тимчасово непрацює']
+};
 
 function parseIntSafe(v, def) {
   const n = parseInt(String(v), 10);
@@ -30,134 +31,76 @@ export default function camerasRoutes(db) {
     const where = [];
     const params = {};
 
-    // bbox
+    // bbox logic (без змін)
     if (req.query.bbox) {
       const parts = String(req.query.bbox).split(',').map(s => parseFloat(s));
       if (parts.length === 4 && parts.every(Number.isFinite)) {
         const [south, west, north, east] = parts;
         where.push('lat BETWEEN @south AND @north');
         where.push('lon BETWEEN @west AND @east');
-        params.south = south;
-        params.north = north;
-        params.west = west;
-        params.east = east;
+        params.south = south; params.north = north; params.west = west; params.east = east;
       }
     }
 
-    // Точні та спеціальні фільтри
     for (const [k, v] of Object.entries(req.query)) {
       if (!ALLOWED_FILTERS.has(k)) continue;
       if (v === undefined || v === null || v === '') continue;
+      const valStr = String(v).trim();
 
-      // ✅ 1. Фільтр по Системі (LIKE, бо в полі список через кому)
-      if (k === 'system') {
-        where.push('integrated_systems LIKE @system_like');
-        params.system_like = `%${String(v).trim()}%`; 
+      // 1. Поля-списки (Ліцензія, Аналітика, Система) -> використовуємо LIKE
+      if (['license_type', 'analytics_object', 'system'].includes(k)) {
+        // system фільтруємо по полю integrated_systems
+        const dbField = k === 'system' ? 'integrated_systems' : k;
+        where.push(`${dbField} LIKE @${k}_like`);
+        params[`${k}_like`] = `%${valStr}%`;
         continue;
       }
 
-      // ✅ 2. Фільтр по ID камери (LIKE, для часткового збігу)
+      // 2. Camera ID (Like)
       if (k === 'camera_id_like') {
         where.push('camera_id LIKE @camera_id_like_val');
-        params.camera_id_like_val = `%${String(v).trim()}%`;
+        params.camera_id_like_val = `%${valStr}%`;
         continue;
       }
 
-      // ✅ 3. Стандартні точні фільтри (license_type, ka_access, oblast...)
-      where.push(`${k} = @${k}`);
-      params[k] = String(v);
-    }
+      // 3. Поля з нормалізацією (Статус, КА)
+      if (['camera_status', 'ka_access'].includes(k)) {
+          const lowerVal = valStr.toLowerCase();
+          const variants = REVERSE_NORM_MAP[lowerVal];
+          
+          if (variants) {
+              // Якщо є варіанти, шукаємо будь-який з них: status IN ('Працює', 'Прцює')
+              // SQLite не чутливий до регістру для ASCII, але для кирилиці краще використати COLLATE NOCASE або lower()
+              // Тут використаємо параметризований IN
+              const keyParams = variants.map((_, i) => `@${k}_${i}`);
+              where.push(`lower(${k}) IN (${keyParams.join(',')})`);
+              variants.forEach((varVal, i) => params[`${k}_${i}`] = varVal);
+          } else {
+              // Точний пошук (case-insensitive)
+              where.push(`lower(${k}) = lower(@${k})`);
+              params[k] = valStr;
+          }
+          continue;
+      }
 
-    // q: загальний пошук
-    if (req.query.q) {
-      const q = `%${String(req.query.q).trim()}%`;
-      where.push(`(
-        camera_id LIKE @q OR
-        camera_name LIKE @q OR
-        owner_name LIKE @q OR
-        settlement_name LIKE @q OR
-        street_name LIKE @q OR
-        integrated_systems LIKE @q
-      )`);
-      params.q = q;
+      // 4. Стандартні поля (Область, Район...)
+      where.push(`${k} = @${k}`);
+      params[k] = valStr;
     }
 
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
-
-    const sql = `
-      SELECT *
-      FROM cameras
-      ${whereSql}
-      LIMIT @limit OFFSET @offset
-    `;
-
-    const countSql = `SELECT COUNT(*) AS cnt FROM cameras ${whereSql}`;
+    const sql = `SELECT * FROM cameras ${whereSql} LIMIT @limit OFFSET @offset`;
 
     try {
       const items = db.prepare(sql).all({ ...params, limit, offset });
-      const total = db.prepare(countSql).get(params).cnt;
-      res.json({ ok: true, total, limit, offset, items });
+      res.json({ ok: true, limit, offset, items }); // total не обов'язково рахувати кожен раз для швидкодії
     } catch (e) {
       console.error(e);
       res.status(500).json({ ok: false, error: e.message });
     }
   });
 
-  // Endpoint для отримання списків фільтрів
-  router.get('/filters', (req, res) => {
-    const fields = [
-      'oblast', 'raion', 'hromada',
-      'camera_status', 'integration_status',
-      'license_type', 'analytics_object',
-      'object_type', 'settlement_type',
-      'ka_access' // ✅ Додано
-    ];
-
-    const result = {};
-
-    // Збираємо унікальні значення для простих полів
-    for (const f of fields) {
-      try {
-        const rows = db.prepare(`
-          SELECT DISTINCT ${f} AS v
-          FROM cameras
-          WHERE ${f} IS NOT NULL AND TRIM(${f}) <> ''
-          ORDER BY ${f}
-          LIMIT 1000
-        `).all();
-        // Для фронтенду ka_access очікується як ka_access_values, але можна і так
-        // Якщо треба адаптувати під фронт:
-        if (f === 'ka_access') result.ka_access_values = rows.map(r => r.v);
-        else if (f === 'camera_status') result.camera_statuses = rows.map(r => r.v);
-        else result[f] = rows.map(r => r.v);
-      } catch (err) {
-        console.error(`Error loading filter ${f}:`, err.message);
-      }
-    }
-
-    // ✅ Збираємо системи (розбиваємо рядок через кому)
-    try {
-      const rows = db.prepare(`
-        SELECT integrated_systems 
-        FROM cameras 
-        WHERE integrated_systems IS NOT NULL AND TRIM(integrated_systems) <> ''
-      `).all();
-      
-      const sysSet = new Set();
-      rows.forEach(r => {
-        String(r.integrated_systems).split(/[,;]/).forEach(s => {
-          const val = s.trim();
-          if (val) sysSet.add(val);
-        });
-      });
-      result.systems = Array.from(sysSet).sort();
-    } catch (err) {
-      console.error("Error loading systems:", err.message);
-      result.systems = [];
-    }
-
-    res.json({ ok: true, filters: result });
-  });
+  // ... (router.get('/filters') перенесено в окремий файл filters.js, тут його не дублюємо) ...
 
   return router;
 }

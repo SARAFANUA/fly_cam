@@ -7,22 +7,27 @@ function fillSelect(selectEl, items, placeholder = '—') {
   if (!selectEl) return;
   const current = selectEl.value;
   selectEl.innerHTML = '';
+  
   const opt0 = document.createElement('option');
   opt0.value = '';
   opt0.textContent = placeholder;
   selectEl.appendChild(opt0);
+  
+  // Фільтруємо null/undefined і сортуємо
   const uniqueItems = [...new Set(items)].filter(Boolean).sort();
+  
   for (const v of uniqueItems) {
     const opt = document.createElement('option');
     opt.value = v;
     opt.textContent = v;
     selectEl.appendChild(opt);
   }
+  
   if (current && uniqueItems.includes(current)) selectEl.value = current;
 }
 
 // --- НОВА ФУНКЦІЯ РЕНДЕРУ ВИПАДАЮЧОГО СПИСКУ ---
-function renderDropdown(dropdownEl, items, onSelect, metaKey = null) {
+function renderDropdown(dropdownEl, items, onSelect) {
     if (!dropdownEl) return;
     dropdownEl.innerHTML = '';
 
@@ -85,16 +90,16 @@ export function initCameraFilters({ onChange } = {}) {
   const els = {
     // Inputs
     id: $('filter-camera-id'),
-    ddId: $('dropdown-camera-id'), // Новий div
+    ddId: $('dropdown-camera-id'),
     
     oblast: $('filter-oblast'),
-    ddOblast: $('dropdown-oblast'), // Новий div
+    ddOblast: $('dropdown-oblast'),
     
     raion: $('filter-raion'),
-    ddRaion: $('dropdown-raion'), // Новий div
+    ddRaion: $('dropdown-raion'),
     
     hromada: $('filter-hromada'),
-    ddHromada: $('dropdown-hromada'), // Новий div
+    ddHromada: $('dropdown-hromada'),
 
     // Selects
     license: $('filter-license-type'),
@@ -185,7 +190,7 @@ export function initCameraFilters({ onChange } = {}) {
             triggerChange();
         });
     } catch(e){}
-    triggerChange(); // Також оновлюємо фільтр під час вводу
+    triggerChange(); // Також оновлюємо фільтр під час вводу (частковий пошук)
   }, 300));
 
   // Load static selects
