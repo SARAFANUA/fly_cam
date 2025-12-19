@@ -80,11 +80,14 @@ CREATE INDEX IF NOT EXISTS idx_cameras_status ON cameras(camera_status);
 CREATE INDEX IF NOT EXISTS idx_cameras_integration_status ON cameras(integration_status);
 CREATE INDEX IF NOT EXISTS idx_cameras_lat_lon ON cameras(lat, lon);
 
+-- Оновлена таблиця з кодами
 CREATE TABLE IF NOT EXISTS katottg_regions (
-  katottg TEXT PRIMARY KEY,
+  katottg TEXT PRIMARY KEY, -- Це код громади (3_id_Громада)
   oblast TEXT,
   raion TEXT,
-  hromada TEXT
+  hromada TEXT,
+  code_oblast TEXT, -- Додаємо код області
+  code_raion TEXT   -- Додаємо код району
 );
 
 CREATE INDEX IF NOT EXISTS idx_katottg_regions_oblast ON katottg_regions(oblast);

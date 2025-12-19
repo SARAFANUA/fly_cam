@@ -124,15 +124,23 @@ export default function filtersRoutes(db) {
     } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
   });
 
-  // 3. REGIONS SEARCH
+  // 3. REGIONS SEARCH З КОДАМИ
   router.get('/regions/search', (req, res) => {
     try {
         const { type, query } = req.query; 
         if (!query || query.length < 2) return res.json({ ok: true, items: [] });
+        
         let sql = '', params = [`${query}%`]; 
-        if (type === 'hromada') sql = `SELECT DISTINCT hromada, raion, oblast FROM katottg_regions WHERE lower(hromada) LIKE lower(?) ORDER BY hromada LIMIT 20`;
-        else if (type === 'raion') sql = `SELECT DISTINCT raion, oblast FROM katottg_regions WHERE lower(raion) LIKE lower(?) ORDER BY raion LIMIT 20`;
-        else sql = `SELECT DISTINCT oblast FROM katottg_regions WHERE lower(oblast) LIKE lower(?) ORDER BY oblast LIMIT 20`;
+        
+        // Повертаємо також коди (katottg, code_raion, code_oblast)
+        if (type === 'hromada') {
+            sql = `SELECT DISTINCT hromada, katottg as code, raion, code_raion, oblast, code_oblast FROM katottg_regions WHERE lower(hromada) LIKE lower(?) ORDER BY hromada LIMIT 20`;
+        } else if (type === 'raion') {
+             sql = `SELECT DISTINCT raion, code_raion as code, oblast, code_oblast FROM katottg_regions WHERE lower(raion) LIKE lower(?) ORDER BY raion LIMIT 20`;
+        } else {
+             sql = `SELECT DISTINCT oblast, code_oblast as code FROM katottg_regions WHERE lower(oblast) LIKE lower(?) ORDER BY oblast LIMIT 20`;
+        }
+        
         const items = db.prepare(sql).all(...params);
         res.json({ ok: true, items });
     } catch (err) { res.json({ ok: true, items: [] }); }

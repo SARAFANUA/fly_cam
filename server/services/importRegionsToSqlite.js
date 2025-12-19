@@ -1,17 +1,4 @@
 // server/services/importRegionsToSqlite.js
-//
-// CLI:
-// node server/services/importRegionsToSqlite.js "path/to/Регіони_КАТОТТГ - КАТОТТГ.csv"
-//
-// Твій CSV має колонки:
-// 1_id_Область, 1_Область, 2_id_Район, 2_Район, 3_id_Громада, 3_Територіальна громада
-//
-// Ми пишемо у katottg_regions:
-// katottg = 3_id_Громада
-// oblast  = 1_Область
-// raion   = 2_Район
-// hromada = 3_Територіальна громада
-
 import fs from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
@@ -40,6 +27,17 @@ function normText(v) {
 function ensureSchema(db) {
   const schemaPath = path.resolve(process.cwd(), 'server', 'db', 'schema.sql');
   const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+  
+  // Для коректного оновлення структури видалимо таблицю, якщо вона стара
+  try {
+     const info = db.pragma('table_info(katottg_regions)');
+     const hasCode = info.some(c => c.name === 'code_oblast');
+     if (!hasCode && info.length > 0) {
+         console.log('Detected old schema. Dropping table katottg_regions...');
+         db.exec('DROP TABLE IF EXISTS katottg_regions');
+     }
+  } catch(e) {}
+
   db.exec(schemaSql);
 }
 
@@ -79,12 +77,14 @@ export function importRegionsToSqlite({ csvPath, dbPath }) {
   });
 
   const stmt = db.prepare(`
-    INSERT INTO katottg_regions (katottg, oblast, raion, hromada)
-    VALUES (@katottg, @oblast, @raion, @hromada)
+    INSERT INTO katottg_regions (katottg, oblast, raion, hromada, code_oblast, code_raion)
+    VALUES (@katottg, @oblast, @raion, @hromada, @code_oblast, @code_raion)
     ON CONFLICT(katottg) DO UPDATE SET
       oblast=excluded.oblast,
       raion=excluded.raion,
-      hromada=excluded.hromada
+      hromada=excluded.hromada,
+      code_oblast=excluded.code_oblast,
+      code_raion=excluded.code_raion
   `);
 
   const tx = db.transaction((items) => {
@@ -93,18 +93,19 @@ export function importRegionsToSqlite({ csvPath, dbPath }) {
     for (const r of items) {
       // ✅ головне: katottg з 3_id_Громада
       const katottg = normText(pick(r, [
-        '3_id_Громада',
-        '3_id_Громади',
-        '3_id_ТГ',
-        'katottg', 'КАТОТТГ', 'KATOTTG', 'KATOTTH', 'katotth'
+        '3_id_Громада', '3_id_Громади', '3_id_ТГ', 'katottg', 'КАТОТТГ'
       ]));
       if (!katottg) continue;
 
       const oblast = normText(pick(r, ['1_Область', 'Область', 'oblast']));
       const raion = normText(pick(r, ['2_Район', 'Район', 'raion']));
       const hromada = normText(pick(r, ['3_Територіальна громада', 'Територіальна громада', 'Громада', 'hromada']));
+      
+      // ✅ Зчитуємо коди для області та району
+      const code_oblast = normText(pick(r, ['1_id_Область', '1_id_Області']));
+      const code_raion = normText(pick(r, ['2_id_Район', '2_id_Району']));
 
-      stmt.run({ katottg, oblast, raion, hromada });
+      stmt.run({ katottg, oblast, raion, hromada, code_oblast, code_raion });
       ok++;
     }
 

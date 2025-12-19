@@ -3,14 +3,13 @@
 import * as cameraRenderer from '../map/cameraRenderer.js';
 import { initCameraFilters } from './cameraFilters.js';
 import { getElements } from './dom.js';
-import { highlightTerritory } from '../map/mapLayers.js'; // ІМПОРТУЄМО НОВУ ФУНКЦІЮ
+import { highlightTerritory } from '../map/mapLayers.js';
 
 let mapInstance = null;
 let camerasVisible = false; 
 let cameraClusteringEnabled = true;
 let lastFilters = {};
 
-// --- HTML: Оновлений, компактний ---
 function buildCameraPanelHtml() {
   return `
     <section class="panel camera-panel-wrapper">
@@ -186,18 +185,10 @@ function togglePanel(isOpen) {
 
 // --- ВИЗНАЧЕННЯ АКТИВНОЇ ТЕРИТОРІЇ ---
 function updateTerritoryHighlight(filters) {
-    // Шукаємо найдетальніший рівень фільтрації
-    let targetCode = null;
-
-    if (filters.hromada) {
-        targetCode = filters.hromada;
-    } else if (filters.raion) {
-        targetCode = filters.raion;
-    } else if (filters.oblast) {
-        targetCode = filters.oblast;
-    }
-
-    // Викликаємо функцію з mapLayers.js
+    // Пріоритет: Громада (код) -> Район (код) -> Область (код)
+    let targetCode = filters.hromada_code || filters.raion_code || filters.oblast_code;
+    
+    // Передаємо код у mapLayers.js (тепер він очікує рядок-код, наприклад "UA32..." або "10")
     highlightTerritory(targetCode);
 }
 

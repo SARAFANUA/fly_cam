@@ -18,8 +18,8 @@ const layersCache = {
 
 // Стилі за замовчуванням (коли нічого не вибрано)
 const DEFAULT_STYLES = {
-    oblast: { color: '#004a99', weight: 3, opacity: 0.9, fill: false }, 
-    raion: { color: '#555555', weight: 1.5, opacity: 0.8, dashArray: '5, 5', fill: false },
+    oblast: { color: '#004a99', weight: 1.8, opacity: 0.9, dashArray: '5, 5', fill: false }, 
+    raion: { color: '#454a5eff', weight: 1.5, opacity: 0.8, dashArray: '5, 5', fill: false },
     hromada: { color: '#999999', weight: 1, opacity: 0.6, fill: false }
 };
 

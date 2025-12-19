@@ -22,7 +22,6 @@ function fillSelect(selectEl, items, placeholder = '—') {
     selectEl.appendChild(opt);
   }
   
-  // Якщо поточне значення валідне для нового списку - залишаємо, інакше скидаємо
   if (current && uniqueItems.includes(current)) {
       selectEl.value = current;
   } else {
@@ -30,7 +29,6 @@ function fillSelect(selectEl, items, placeholder = '—') {
   }
 }
 
-// --- НОВА ФУНКЦІЯ РЕНДЕРУ ВИПАДАЮЧОГО СПИСКУ ---
 function renderDropdown(dropdownEl, items, onSelect) {
     if (!dropdownEl) return;
     dropdownEl.innerHTML = '';
@@ -48,11 +46,9 @@ function renderDropdown(dropdownEl, items, onSelect) {
         let metaText = '';
 
         if (typeof item === 'object') {
-             // Для регіонів
              if (item.hromada) { mainText = item.hromada; metaText = `${item.raion || ''}, ${item.oblast || ''}`; }
              else if (item.raion) { mainText = item.raion; metaText = item.oblast || ''; }
              else if (item.oblast) { mainText = item.oblast; }
-             // Для ID камер
              else if (item.camera_id) { mainText = item.camera_id; metaText = item.camera_name || ''; }
         } else {
             mainText = item;
@@ -91,13 +87,10 @@ function debounce(fn, ms = 300) {
 
 export function initCameraFilters({ onChange } = {}) {
   const els = {
-    // Inputs
     id: $('filter-camera-id'), ddId: $('dropdown-camera-id'),
     oblast: $('filter-oblast'), ddOblast: $('dropdown-oblast'),
     raion: $('filter-raion'), ddRaion: $('dropdown-raion'),
     hromada: $('filter-hromada'), ddHromada: $('dropdown-hromada'),
-
-    // Selects
     license: $('filter-license-type'),
     analytics: $('filter-analytics-object'),
     status: $('filter-camera-status'),
@@ -114,6 +107,12 @@ export function initCameraFilters({ onChange } = {}) {
       oblast: els.oblast?.value?.trim() || '',
       raion: els.raion?.value?.trim() || '',
       hromada: els.hromada?.value?.trim() || '',
+      
+      // ✅ Передаємо коди для карти
+      oblast_code: els.oblast?.dataset?.code || '',
+      raion_code: els.raion?.dataset?.code || '',
+      hromada_code: els.hromada?.dataset?.code || '',
+
       license_type: els.license?.value || '',
       analytics_object: els.analytics?.value || '',
       camera_status: els.status?.value || '',
@@ -126,7 +125,6 @@ export function initCameraFilters({ onChange } = {}) {
     onChange?.(getFilters());
   }, 500);
 
-  // --- ДИНАМІЧНЕ ОНОВЛЕННЯ СИСТЕМ ---
   async function updateSystemFilters() {
       const params = {
           oblast: els.oblast.value.trim(),
@@ -137,17 +135,10 @@ export function initCameraFilters({ onChange } = {}) {
       try {
           const data = await fetchFilters(params);
           if (data && data.filters) {
-              // Оновлюємо список систем
               fillSelect(els.system, data.filters.systems || [], 'Будь-яка система');
-              // Також можна оновити ліцензії та аналітику, якщо вони теж залежать від регіону в filters.js
-              // fillSelect(els.license, data.filters.license_type || [], 'Будь-який тип');
-              // fillSelect(els.analytics, data.filters.analytics_object || [], 'Будь-який об\'єкт');
           }
       } catch (e) { console.error('Error updating system filters:', e); }
   }
-
-
-  // --- ОБРОБНИКИ ПОДІЙ ---
 
   document.addEventListener('mousedown', (e) => {
       [els.ddId, els.ddOblast, els.ddRaion, els.ddHromada].forEach(dd => {
@@ -157,33 +148,51 @@ export function initCameraFilters({ onChange } = {}) {
       });
   });
 
+  // --- ОБРОБНИКИ ДЛЯ РЕГІОНІВ (З КОДАМИ) ---
+
   // 1. ГРОМАДА
   els.hromada.addEventListener('input', async (e) => {
       const val = e.target.value.trim();
+      delete els.hromada.dataset.code; // Скидаємо код при редагуванні
+      
       if (val.length < 2) { els.ddHromada.style.display = 'none'; return; }
       
       const items = await searchRegion('hromada', val);
       renderDropdown(els.ddHromada, items, (item) => {
           els.hromada.value = item.hromada;
-          if (item.raion) els.raion.value = item.raion;
-          if (item.oblast) els.oblast.value = item.oblast;
+          els.hromada.dataset.code = item.code || ''; // Зберігаємо код громади
+
+          if (item.raion) {
+              els.raion.value = item.raion;
+              els.raion.dataset.code = item.code_raion || ''; // Код району
+          }
+          if (item.oblast) {
+              els.oblast.value = item.oblast;
+              els.oblast.dataset.code = item.code_oblast || ''; // Код області
+          }
           
-          updateSystemFilters(); // ОНОВЛЮЄМО СПИСКИ
+          updateSystemFilters();
           triggerChange();
       });
   });
-  // Якщо користувач змінив вручну і пішов з поля
   els.hromada.addEventListener('blur', () => setTimeout(updateSystemFilters, 200));
 
   // 2. РАЙОН
   els.raion.addEventListener('input', async (e) => {
       const val = e.target.value.trim();
+      delete els.raion.dataset.code;
+
       if (val.length < 2) { els.ddRaion.style.display = 'none'; return; }
 
       const items = await searchRegion('raion', val);
       renderDropdown(els.ddRaion, items, (item) => {
           els.raion.value = item.raion;
-          if (item.oblast) els.oblast.value = item.oblast;
+          els.raion.dataset.code = item.code || '';
+
+          if (item.oblast) {
+              els.oblast.value = item.oblast;
+              els.oblast.dataset.code = item.code_oblast || '';
+          }
           
           updateSystemFilters();
           triggerChange();
@@ -194,10 +203,13 @@ export function initCameraFilters({ onChange } = {}) {
   // 3. ОБЛАСТЬ
   els.oblast.addEventListener('input', async (e) => {
       const val = e.target.value.trim();
+      delete els.oblast.dataset.code;
+
       if (val.length < 2) { els.ddOblast.style.display = 'none'; return; }
       const items = await searchRegion('oblast', val);
       renderDropdown(els.ddOblast, items, (item) => {
           els.oblast.value = item.oblast;
+          els.oblast.dataset.code = item.code || '';
           
           updateSystemFilters();
           triggerChange();
@@ -205,7 +217,6 @@ export function initCameraFilters({ onChange } = {}) {
   });
   els.oblast.addEventListener('blur', () => setTimeout(updateSystemFilters, 200));
 
-  // 4. ID КАМЕРИ
   els.id.addEventListener('input', debounce(async () => {
     const q = els.id.value.trim();
     if (q.length < 2) { els.ddId.style.display = 'none'; return; }
@@ -219,13 +230,11 @@ export function initCameraFilters({ onChange } = {}) {
     triggerChange(); 
   }, 300));
 
-  // Load static selects (initial)
   async function loadInitialFilters() {
     try {
-        const data = await fetchFilters({}); // Пустий запит = усі варіанти
+        const data = await fetchFilters({});
         if (!data || !data.filters) return;
         const f = data.filters;
-
         fillSelect(els.status, f.camera_statuses || [], 'Будь-який стан');
         fillSelect(els.system, f.systems || [], 'Будь-яка система');
         fillSelect(els.ka, f.ka_access_values || [], 'КА: будь-яке');
@@ -240,11 +249,14 @@ export function initCameraFilters({ onChange } = {}) {
 
   els.resetBtn.onclick = () => {
     [els.id, els.oblast, els.raion, els.hromada, els.license, els.analytics, els.status, els.system, els.ka].forEach(el => {
-        if(el) el.value = '';
+        if(el) {
+             el.value = '';
+             delete el.dataset.code; // Очищаємо коди
+        }
     });
     [els.ddId, els.ddOblast, els.ddRaion, els.ddHromada].forEach(el => el.style.display = 'none');
     
-    updateSystemFilters(); // Повертаємо повний список
+    updateSystemFilters();
     triggerChange();
   };
 
