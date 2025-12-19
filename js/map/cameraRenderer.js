@@ -9,33 +9,17 @@ let lastRendered = {
   isVisible: true,
 };
 
-// Словник нормалізації (такий самий, як на сервері)
+// Словник нормалізації
 const NORMALIZATION_MAP = {
   // КА Доступ / Загальні
-  'hi': 'Ні',
-  'ні': 'Ні',
-  'no': 'Ні',
-  'так': 'Так',
-  'yes': 'Так',
-  'true': 'Так',
-  'false': 'Ні',
-  
+  'hi': 'Ні', 'ні': 'Ні', 'no': 'Ні', 'так': 'Так', 'yes': 'Так', 'true': 'Так', 'false': 'Ні',
   // Статуси
-  'прцює': 'Працює',
-  'працює': 'Працює',
-  'active': 'Працює',
-  'on': 'Працює',
-  'тимчасово не працює': 'Тимчасово не працює',
-  'тимчасово непрацює': 'Тимчасово не працює',
-  'не працює': 'Не працює',
-  'виведена з ладу': 'Виведена з ладу',
-  'відключена': 'Відключена',
-  'знищена': 'Знищена',
-  'демонтована': 'Демонтована',
-
+  'прцює': 'Працює', 'працює': 'Працює', 'active': 'Працює', 'on': 'Працює',
+  'тимчасово не працює': 'Тимчасово не працює', 'тимчасово непрацює': 'Тимчасово не працює',
+  'не працює': 'Не працює', 'виведена з ладу': 'Виведена з ладу', 'відключена': 'Відключена',
+  'знищена': 'Знищена', 'демонтована': 'Демонтована',
   // Інтеграція
-  'камера інтегрована до системи': 'Інтегрована',
-  'не інтегрована': 'Не інтегрована'
+  'камера інтегрована до системи': 'Інтегрована', 'не інтегрована': 'Не інтегрована'
 };
 
 function safeNum(v) {
@@ -43,62 +27,101 @@ function safeNum(v) {
   return Number.isFinite(n) ? n : null;
 }
 
-// Функція очищення тексту
 function normalizeValue(val) {
   if (val === null || val === undefined) return '';
   const str = String(val).trim();
   const lower = str.toLowerCase();
-  // Якщо є в словнику - повертаємо гарне значення, інакше оригінал
   return NORMALIZATION_MAP[lower] || str;
 }
 
-// --- НОВА ФУНКЦІЯ POPUP (Картка камери) ---
+// --- ВИЗНАЧЕННЯ КОЛЬОРУ (СТАТУС) ---
+function getStatusColor(statusRaw) {
+    const s = statusRaw.toLowerCase();
+    
+    // 1. Червоні (критичні)
+    if (s.includes('знищена') || s.includes('демонтована') || s.includes('ладу')) {
+        return '#dc2626'; 
+    }
+    // 2. Жовті (тимчасові проблеми)
+    if (s.includes('не працює') || s.includes('тимчасово') || s.includes('відключена')) {
+        return '#f59e0b'; 
+    }
+    // 3. Зелені (активні)
+    if (s.includes('працює') || s.includes('active') || s.includes('on')) {
+        return '#16a34a'; 
+    }
+    
+    return '#64748b'; // Сірий за замовчуванням
+}
+
+// --- ВИЗНАЧЕННЯ ІКОНКИ (ОБ'ЄКТ АНАЛІТИКИ) - ОНОВЛЕНО ---
+function getAnalyticsIcon(analyticsRaw) {
+    if (!analyticsRaw) return 'fa-solid fa-video'; 
+    
+    const s = analyticsRaw.toLowerCase();
+
+    // 1. Явно "Без аналітики" -> звичайна камера
+    if (s.includes('без аналіт') || s.includes('no analyt')) {
+        return 'fa-solid fa-video';
+    }
+
+    // 2. ТЗ (Авто)
+    if (s.includes('тз') || s.includes('авто') || s.includes('vehicle') || s.includes('car') || s.includes('номер')) {
+        return 'fa-solid fa-car';
+    }
+
+    // 3. Люди
+    if (s.includes('особ') || s.includes('облич') || s.includes('human') || s.includes('face') || s.includes('person')) {
+        return 'fa-solid fa-user';
+    }
+
+    // 4. Інші аналітичні (якщо є слово "інші" або "аналіт", але не "без") -> Мікросхема (Smart)
+    if (s.includes('інші') || s.includes('other') || s.includes('аналіт')) {
+        return 'fa-solid fa-microchip'; // Або fa-eye, fa-brain
+    }
+
+    // За замовчуванням
+    return 'fa-solid fa-video';
+}
+
+// --- POPUP ---
 function buildPopup(p) {
-  // 1. Нормалізуємо основні поля
   const status = normalizeValue(p.camera_status) || 'Невідомо';
   const kaAccess = normalizeValue(p.ka_access) || '—';
   const license = normalizeValue(p.license_type);
   const analytics = normalizeValue(p.analytics_object);
-  const integSystem = p.integrated_systems || ''; // Систему лишаємо як є, це назва
+  const integSystem = p.integrated_systems || '';
 
-  // 2. Логіка кольору статусу (на основі вже нормалізованого значення)
   const statusLower = status.toLowerCase();
   let statusClass = 'status-gray';
   let statusIcon = '<i class="fa-solid fa-circle-question"></i>';
 
-  if (statusLower.includes('працює')) {
-      statusClass = 'status-green'; 
-      statusIcon = '<i class="fa-solid fa-check-circle"></i>';
+  if (statusLower.includes('знищена') || statusLower.includes('демонтована') || statusLower.includes('ладу')) {
+      statusClass = 'status-red'; 
+      statusIcon = '<i class="fa-solid fa-ban"></i>';
   } else if (statusLower.includes('не працює') || statusLower.includes('тимчасово') || statusLower.includes('відключена')) {
       statusClass = 'status-yellow';
       statusIcon = '<i class="fa-solid fa-triangle-exclamation"></i>';
-  } else if (statusLower.includes('знищена') || statusLower.includes('демонтована') || statusLower.includes('ладу')) {
-      statusClass = 'status-red'; // Можна додати червоний стиль в CSS
-      statusIcon = '<i class="fa-solid fa-ban"></i>';
+  } else if (statusLower.includes('працює')) {
+      statusClass = 'status-green'; 
+      statusIcon = '<i class="fa-solid fa-check-circle"></i>';
   }
 
-  // 3. Формування адреси
   const settlement = [p.settlement_type, p.settlement_name].filter(Boolean).join(' ');
   const street = p.highway_number 
       ? `🛣️ ${p.highway_number}` 
       : [p.street_type, p.street_name].filter(Boolean).join(' ');
 
-  // 4. Локація (Область, Район, Громада)
-  const locationStr = [p.oblast, p.raion ? p.raion + ' р-н' : '', p.hromada ? p.hromada + ' ТГ' : '']
-      .filter(Boolean)
-      .join(', ');
-
+  const locationStr = [p.oblast, p.raion ? p.raion + ' р-н' : '', p.hromada ? p.hromada + ' ТГ' : ''].filter(Boolean).join(', ');
   const camName = p.camera_name || 'Камера без назви';
   const camId = p.camera_id || 'ID відсутній';
 
-  // 5. HTML Шаблон
   return `
       <div class="camera-popup-card">
           <div class="popup-header">
               <h3>${camName}</h3>
               <div class="popup-subtitle">${camId}</div>
           </div>
-
           <div class="popup-body">
               <div class="popup-row location-row">
                   <i class="fa-solid fa-location-dot"></i>
@@ -108,22 +131,18 @@ function buildPopup(p) {
                       <div class="location-meta">${locationStr}</div>
                   </div>
               </div>
-
               <div class="popup-badge ${statusClass}">
                   ${statusIcon} <span>${status}</span>
               </div>
-
               <div class="popup-grid">
                   ${license ? `<div class="info-item"><strong>Функціонал:</strong> ${license}</div>` : ''}
                   ${analytics ? `<div class="info-item"><strong>Об'єкт:</strong> ${analytics}</div>` : ''}
               </div>
-
               <div class="popup-row access-row">
                   <strong>Доступ КА:</strong> 
                   <span class="ka-val ${kaAccess === 'Так' ? 'text-green' : 'text-red'}">${kaAccess}</span>
               </div>
           </div>
-
           ${integSystem ? `
           <div class="popup-footer">
               <div class="popup-subtitle" title="Інтегрована система">${integSystem}</div>
@@ -140,11 +159,15 @@ function formatCount(n) {
 
 // --- ІКОНКА ---
 function buildCameraIcon(camera) {
-  // Використовуємо нормалізований статус і тут для визначення активності
-  const status = normalizeValue(camera.camera_status).toLowerCase();
-  const isActive = status.includes('працює');
+  const statusNormal = normalizeValue(camera.camera_status);
   
-  const bgColor = isActive ? '#2563eb' : '#64748b'; 
+  // 1. Колір (Статус)
+  const color = getStatusColor(statusNormal);
+  
+  // 2. Іконка (Аналітика)
+  const iconClass = getAnalyticsIcon(camera.analytics_object);
+  
+  const gradId = `fov-grad-${color.replace('#', '')}`;
 
   const azimuth = parseFloat(camera.azimuth);
   const hasAzimuth = !isNaN(azimuth);
@@ -155,14 +178,14 @@ function buildCameraIcon(camera) {
         <div class="camera-fov-container" style="transform: translate(-50%, -50%) rotate(${azimuth}deg);">
             <svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
                 <defs>
-                    <linearGradient id="fov-grad-${isActive ? 'on' : 'off'}" x1="0%" y1="100%" x2="0%" y2="0%">
-                        <stop offset="0%" style="stop-color:${bgColor}; stop-opacity:0.85" />
-                        <stop offset="100%" style="stop-color:${bgColor}; stop-opacity:0.15" />
+                    <linearGradient id="${gradId}" x1="0%" y1="100%" x2="0%" y2="0%">
+                        <stop offset="0%" style="stop-color:${color}; stop-opacity:0.85" />
+                        <stop offset="100%" style="stop-color:${color}; stop-opacity:0.15" />
                     </linearGradient>
                 </defs>
                 <path d="M60 60 L15 0 A 60 60 0 0 1 105 0 Z" 
-                      fill="url(#fov-grad-${isActive ? 'on' : 'off'})" 
-                      stroke="${bgColor}" 
+                      fill="url(#${gradId})" 
+                      stroke="${color}" 
                       stroke-width="1.5" 
                       stroke-opacity="0.8"
                 />
@@ -172,8 +195,8 @@ function buildCameraIcon(camera) {
   }
 
   const markerHtml = `
-    <div class="camera-marker-body" style="background: ${bgColor};">
-      <i class="fa-solid fa-video"></i>
+    <div class="camera-marker-body" style="background: ${color};">
+      <i class="${iconClass}"></i>
     </div>
   `;
 
@@ -193,26 +216,18 @@ const cameraClusterGroup = L.markerClusterGroup({
     spiderfyOnMaxZoom: true,
     removeOutsideVisibleBounds: true,
     animate: true,
-
     maxClusterRadius: function (zoom) {
         if (zoom <= 6) return 140; 
         if (zoom <= 8) return 100;
         if (zoom <= 11) return 80;
         return 60;
     },
-
     iconCreateFunction: function(cluster) {
         const count = cluster.getChildCount();
         let sizeClass = 'cluster-small';
         let size = 44; 
-
-        if (count >= 1000) {
-            sizeClass = 'cluster-region';
-            size = 64; 
-        } else if (count >= 100) {
-            sizeClass = 'cluster-district';
-            size = 54;
-        }
+        if (count >= 1000) { sizeClass = 'cluster-region'; size = 64; } 
+        else if (count >= 100) { sizeClass = 'cluster-district'; size = 54; }
 
         return L.divIcon({
             html: `
@@ -227,22 +242,17 @@ const cameraClusterGroup = L.markerClusterGroup({
     }
 });
 
-// --- ОНОВЛЕНА ФУНКЦІЯ ПІДКЛЮЧЕННЯ КАРТИ ---
+// --- ЕКСПОРТОВАНІ ФУНКЦІЇ ---
 export function setMapInstance(map) {
   currentMapInstance = map;
   currentMapInstance.addLayer(cameraClusterGroup);
   currentMapInstance.addLayer(nonClusteredCamerasLayer);
 
-  // Логіка видимості конусів залежно від зуму
   const updateFovVisibility = () => {
       const zoom = map.getZoom();
       const container = map.getContainer();
-      
-      if (zoom >= 14) {
-          container.classList.add('map-show-fov');
-      } else {
-          container.classList.remove('map-show-fov');
-      }
+      if (zoom >= 14) container.classList.add('map-show-fov');
+      else container.classList.remove('map-show-fov');
   };
 
   map.on('zoomend', updateFovVisibility);
