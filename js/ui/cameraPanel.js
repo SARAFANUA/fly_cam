@@ -5,12 +5,11 @@ import { initCameraFilters } from './cameraFilters.js';
 import { getElements } from './dom.js';
 
 let mapInstance = null;
-// 1. ЗМІНА: За замовчуванням false (вимкнено)
 let camerasVisible = false; 
 let cameraClusteringEnabled = true;
 let lastFilters = {};
 
-// --- HTML: Тільки фільтри (без кнопки оновлення) ---
+// --- HTML: Оновлений, компактний ---
 function buildCameraPanelHtml() {
   return `
     <section class="panel camera-panel-wrapper">
@@ -42,15 +41,14 @@ function buildCameraPanelHtml() {
       </div>
 
       <div class="region-filters-block">
-          <div class="field-group">
-            <label class="field-label" for="filter-hromada">Громада <span class="hint">(автозаповнення)</span></label>
-            <div class="input-wrapper">
-                <input id="filter-hromada" class="styled-input" placeholder="Почніть вводити назву..." autocomplete="off"/>
-                <div id="dropdown-hromada" class="autocomplete-dropdown"></div>
-            </div>
-          </div>
-
           <div class="grid-2">
+            <div class="field-group">
+                <label class="field-label" for="filter-oblast">Область</label>
+                <div class="input-wrapper">
+                    <input id="filter-oblast" class="styled-input" placeholder="Область" autocomplete="off"/>
+                    <div id="dropdown-oblast" class="autocomplete-dropdown"></div>
+                </div>
+            </div>
             <div class="field-group">
                 <label class="field-label" for="filter-raion">Район</label>
                 <div class="input-wrapper">
@@ -58,12 +56,13 @@ function buildCameraPanelHtml() {
                     <div id="dropdown-raion" class="autocomplete-dropdown"></div>
                 </div>
             </div>
-            <div class="field-group">
-                <label class="field-label" for="filter-oblast">Область</label>
-                <div class="input-wrapper">
-                    <input id="filter-oblast" class="styled-input" placeholder="Область" autocomplete="off"/>
-                    <div id="dropdown-oblast" class="autocomplete-dropdown"></div>
-                </div>
+          </div>
+
+          <div class="field-group" style="margin-bottom: 0;">
+            <label class="field-label" for="filter-hromada">Громада <span class="hint">(автозаповнення)</span></label>
+            <div class="input-wrapper">
+                <input id="filter-hromada" class="styled-input" placeholder="Почніть вводити назву..." autocomplete="off"/>
+                <div id="dropdown-hromada" class="autocomplete-dropdown"></div>
             </div>
           </div>
       </div>
@@ -103,18 +102,19 @@ function buildCameraPanelHtml() {
   `;
 }
 
-// --- Створення фіксованого футера для кнопки ---
+// --- Фіксований футер для кнопки оновлення ---
 function ensureSyncButtonFooter(sidebarContent) {
     if (document.getElementById('camera-sidebar-footer')) return;
 
     const footer = document.createElement('div');
     footer.id = 'camera-sidebar-footer';
     
+    // Компактний стиль для футера
     footer.innerHTML = `
         <button id="sync-db-btn" type="button">
             <i class="fa-solid fa-rotate"></i> Оновити базу камер
         </button>
-        <div id="sync-status" style="font-size: 0.75em; color: #888; margin-top: 5px; text-align: center;"></div>
+        <div id="sync-status" style="font-size: 0.7em; color: #888; margin-top: 4px; text-align: center;"></div>
     `;
     
     sidebarContent.appendChild(footer);
@@ -158,7 +158,6 @@ async function reloadWithCurrentSettings() {
 
   if (!camerasVisible) {
     cameraRenderer.clearAllCameras();
-    // Очищаємо підказку про кількість камер
     const hint = document.getElementById('camera-panel-hint');
     if (hint) hint.textContent = '';
     return;
@@ -193,7 +192,6 @@ function togglePanel(isOpen) {
     }
 }
 
-// 2. Головна функція ініціалізації
 export function initCameraPanel(map) {
   mapInstance = map;
   const ui = getElements();
@@ -237,7 +235,6 @@ export function initCameraPanel(map) {
   const clustBtn = document.getElementById('toggle-camera-clustering-btn');
 
   if (visBtn) {
-      // Синхронізуємо стан чекбокса зі змінною
       visBtn.checked = camerasVisible; 
       visBtn.onchange = (e) => {
           camerasVisible = e.target.checked;

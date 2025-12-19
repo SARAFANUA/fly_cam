@@ -8,310 +8,173 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
-    margin: 12px 0; /* Трохи більше відступу між панелями */
+    margin: 10px 0; /* Зменшено відступ */
     border: 1px solid var(--border-color, #e2e8f0);
-    border-radius: 12px; /* Більш скруглені кути */
+    border-radius: 12px;
     background: #ffffff;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); /* М'яка тінь */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
     overflow: hidden;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.panel.hidden {
-    display: none !important;
-}
-
-/* Градієнт для виділених панелей */
-.panel-soft {
-    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-}
+.panel.hidden { display: none !important; }
+.panel-soft { background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); }
 
 /* Заголовок панелі */
 .panel-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 12px 16px; /* Більше простору всередині хедера */
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 10px 14px; /* Компактніше */
     border-bottom: 1px solid var(--border-color, #e2e8f0);
-    background: #ffffff;
-    flex-shrink: 0;
+    background: #ffffff; flex-shrink: 0;
 }
-
 .panel-head h3 {
-    margin: 0;
-    font-size: 0.95rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    margin: 0; font-size: 0.9rem; font-weight: 700; letter-spacing: 0.02em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     color: var(--text-color, #1e293b);
 }
-
-/* Кнопки в заголовку */
-.panel-head-actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-}
+.panel-head-actions { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
 .panel-icon-btn {
-    border: 1px solid transparent; /* Прибрали бордер у звичайному стані */
-    background: transparent;
-    border-radius: 6px;
-    width: 24px;
-    height: 24px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: #64748b; /* Slate-500 */
-    transition: all 0.2s ease;
-    font-size: 14px;
+    border: 1px solid transparent; background: transparent; border-radius: 6px;
+    width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; color: #64748b; transition: all 0.2s ease; font-size: 14px;
 }
-
-.panel-icon-btn:hover {
-    background: #f1f5f9; /* Slate-100 */
-    color: var(--primary-color, #3b82f6);
-}
-
-.panel-icon-btn.panel-close-btn:hover {
-    background: #fef2f2; /* Red-50 */
-    color: var(--danger-color, #ef4444);
-}
+.panel-icon-btn:hover { background: #f1f5f9; color: var(--primary-color, #3b82f6); }
+.panel-icon-btn.panel-close-btn:hover { background: #fef2f2; color: var(--danger-color, #ef4444); }
 
 /* Тіло панелі */
-.panel-body {
-    padding: 16px;
-    overflow: auto;
-    min-height: 0;
-    flex-grow: 1;
+.panel-body { padding: 12px; overflow: auto; min-height: 0; flex-grow: 1; }
+
+/* =========================================
+   СІТКА ТА КОМПАКТНІСТЬ (Для фільтрів)
+   ========================================= */
+
+/* Сітка на 2 колонки */
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+/* Зменшені відступи для полів у сайдбарі */
+.sidebar-content .field-group {
+    margin-bottom: 10px; /* Було 15px */
+}
+
+.region-filters-block {
+    background: #f8fafc; border-radius: 10px; padding: 12px;
+    margin-bottom: 12px; border: 1px solid #e2e8f0;
+}
+
+.region-filters-block .field-group:last-child {
+    margin-bottom: 0;
 }
 
 /* =========================================
-   СТИЛІ ДЛЯ ПАНЕЛІ АНОМАЛІЙ (Оновлено)
+   ПАНЕЛЬ АНОМАЛІЙ
    ========================================= */
-
 .anomaly-description {
-    font-size: 0.85rem;
-    color: #64748b; /* Slate-500 */
-    margin: 0 0 20px 0;
-    line-height: 1.5;
-    background: #f8fafc;
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px dashed #cbd5e1;
+    font-size: 0.85rem; color: #64748b; margin: 0 0 15px 0;
+    line-height: 1.4; background: #f8fafc; padding: 8px;
+    border-radius: 8px; border: 1px dashed #cbd5e1;
 }
-
-.anomaly-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
+.anomaly-controls { display: flex; flex-direction: column; gap: 10px; }
 .anomaly-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 15px;
-    padding: 8px 12px;
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 10px; padding: 6px 10px; background: #fff;
+    border: 1px solid #e2e8f0; border-radius: 8px;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
-
-/* Ефект фокусу на весь рядок */
 .anomaly-row:focus-within {
     border-color: var(--primary-color, #3b82f6);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
-
 .anomaly-label {
-    font-size: 0.9rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--text-color, #334155);
-    cursor: pointer;
-    flex-grow: 1;
+    font-size: 0.85rem; font-weight: 600; display: flex; align-items: center;
+    gap: 8px; color: var(--text-color, #334155); cursor: pointer; flex-grow: 1;
 }
-
-.anomaly-label i {
-    font-size: 1.1em;
-}
-
-/* Кольори лейблів */
+.anomaly-label i { font-size: 1.1em; }
 .anomaly-label.label-warning i { color: var(--warning-color, #f59e0b); }
 .anomaly-label.label-danger i { color: var(--danger-color, #ef4444); }
 
 .anomaly-input {
-    width: 80px;
-    padding: 6px 10px;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    text-align: center;
-    color: #1e293b;
-    background-color: #f8fafc; /* Трохи сірий фон */
-    transition: all 0.2s;
+    width: 70px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px;
+    font-size: 0.9rem; font-weight: 600; text-align: center;
+    color: #1e293b; background-color: #f8fafc; transition: all 0.2s;
 }
+.anomaly-input:focus { background-color: #fff; border-color: var(--primary-color); outline: none; }
 
-.anomaly-input:focus {
-    background-color: #fff;
-    border-color: var(--primary-color, #3b82f6);
-    outline: none;
-}
-
-/* Кнопка на всю ширину */
 .btn-block {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    margin-top: 10px;
-    padding: 12px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
+    width: 100%; display: flex; justify-content: center; align-items: center;
+    gap: 8px; margin-top: 5px; padding: 10px;
+    font-size: 0.9rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.03em; box-shadow: 0 2px 4px -1px rgba(59, 130, 246, 0.2);
     transition: transform 0.1s active;
 }
-
-.btn-block:active {
-    transform: translateY(1px);
-    box-shadow: none;
-}
+.btn-block:active { transform: translateY(1px); box-shadow: none; }
 
 /* =========================================
-   ІНШІ СТИЛІ (Camera Panel, Messages, etc.)
+   CAMERA PANEL STYLES
    ========================================= */
 
 .camera-panel-wrapper {
-    background: transparent;
-    border: none;
-    padding: 0;
-    margin: 0;
-    box-shadow: none;
+    background: transparent; border: none; padding: 0; margin: 0; box-shadow: none;
 }
-
 .panel-header-controls {
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(8px);
-    border-radius: 12px;
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid rgba(0,0,0,0.05);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(8px);
+    border-radius: 10px; padding: 8px 12px; margin-bottom: 12px;
+    border: 1px solid rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 8px;
 }
-
-.region-filters-block {
-    background: #f8fafc;
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 15px;
-    border: 1px solid #e2e8f0;
+.control-row { display: flex; justify-content: space-between; align-items: center; }
+.control-label {
+    font-size: 0.9em; font-weight: 600; color: var(--text-primary);
+    display: flex; align-items: center; gap: 8px;
 }
+.control-label i { color: var(--primary-color); opacity: 0.8; }
 
 .results-hint {
-    text-align: center;
-    margin-top: 10px;
-    font-size: 0.85em;
-    color: #64748b;
-    font-style: italic;
+    text-align: center; margin-top: 8px;
+    font-size: 0.8em; color: #64748b; font-style: italic;
 }
 
+/* =========================================
+   UTILITY UI ELEMENTS
+   ========================================= */
+
 .drop-area {
-    border: 2px dashed #cbd5e1;
-    border-radius: 12px;
-    padding: 20px;
-    text-align: center;
-    color: #64748b;
-    background: #f8fafc;
+    border: 2px dashed #cbd5e1; border-radius: 10px; padding: 15px;
+    text-align: center; color: #64748b; background: #f8fafc;
     transition: all 0.2s ease;
 }
 .drop-area:hover, .drop-area.highlight {
     border-color: var(--primary-color, #3b82f6);
-    background: #eff6ff;
-    color: var(--primary-color, #3b82f6);
+    background: #eff6ff; color: var(--primary-color, #3b82f6);
 }
 
 /* Messages */
 .message {
-    padding: 12px 16px;
-    border-radius: 8px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 10px 0 0 0;
-    font-size: 0.9em;
-    font-weight: 500;
+    padding: 10px 14px; border-radius: 8px; display: flex; justify-content: space-between;
+    align-items: center; margin: 10px 0 0 0; font-size: 0.85em; font-weight: 500;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
-.message.info {
-    background: #eff6ff;
-    border-left: 4px solid var(--primary-color);
-    color: #1e3a8a;
-}
-.message.success {
-    background: #f0fdf4;
-    border-left: 4px solid var(--success-color);
-    color: #14532d;
-}
-.message.error {
-    background: #fef2f2;
-    border-left: 4px solid var(--danger-color);
-    color: #7f1d1d;
-}
+.message.info { background: #eff6ff; border-left: 4px solid var(--primary-color); color: #1e3a8a; }
+.message.success { background: #f0fdf4; border-left: 4px solid var(--success-color); color: #14532d; }
+.message.error { background: #fef2f2; border-left: 4px solid var(--danger-color); color: #7f1d1d; }
 
-
-/* Стилізація кнопки "Оновити" */
+/* Кнопка оновлення */
 #btn-update-anomalies {
-    width: 100%;
-    background-color: #e2e8f0;
-    color: #334155;
-    border: 1px solid #cbd5e1;
-    font-weight: 600;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    padding: 10px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
+    width: 100%; background-color: #e2e8f0; color: #334155;
+    border: 1px solid #cbd5e1; font-weight: 600;
+    display: flex; justify-content: center; align-items: center;
+    gap: 8px; padding: 8px; border-radius: 8px; cursor: pointer; transition: all 0.2s;
+    font-size: 0.9em;
 }
-
 #btn-update-anomalies:hover {
-     background-color: #cbd5e1;
-    box-shadow: 0 6px 10px -2px rgba(43, 45, 49, 0.4);
+    background-color: #cbd5e1; box-shadow: 0 4px 6px -2px rgba(43, 45, 49, 0.4);
     transform: translateY(-1px);
 }
-
-#btn-update-anomalies:active {
-    transform: translateY(0);
-    box-shadow: none;
-}
-
-/* Стан завантаження/disabled */
+#btn-update-anomalies:active { transform: translateY(0); box-shadow: none; }
 #btn-update-anomalies:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    background: #94a3b8; /* Slate-400 */
-    box-shadow: none;
-    transform: none;
+    opacity: 0.7; cursor: not-allowed; background: #94a3b8; box-shadow: none; transform: none;
 }
-
-/* Іконка всередині */
-#btn-update-anomalies i {
-    font-size: 1.1em;
-}
-
+#btn-update-anomalies i { font-size: 1.1em; }

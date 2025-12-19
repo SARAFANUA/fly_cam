@@ -30,11 +30,11 @@ input:checked + .slider:before { transform: translateX(24px); }
 input:checked + .slider-small { background-color: var(--primary-color); }
 input:checked + .slider-small:before { transform: translateX(14px); }
 
-/* --- Inputs & Selects --- */
-.field-group { margin-bottom: 15px; }
+/* --- Inputs & Selects (Compact) --- */
+.field-group { margin-bottom: 12px; } /* Трохи зменшено */
 
 .field-label {
-    display: block; margin-bottom: 6px; font-size: 0.85em;
+    display: block; margin-bottom: 4px; font-size: 0.8em; /* Компактніше */
     font-weight: 600; color: var(--text-secondary);
     text-transform: uppercase; letter-spacing: 0.03em;
 }
@@ -43,10 +43,11 @@ input:checked + .slider-small:before { transform: translateX(14px); }
     color: var(--success-color); opacity: 0.8;
 }
 
+/* Styled Inputs (Modern & Compact) */
 .styled-input, .styled-select {
-    width: 100%; padding: 10px 12px;
+    width: 100%; padding: 8px 10px; /* Зменшено висоту */
     border-radius: 8px; border: 1px solid #e2e8f0;
-    background-color: white; font-size: 0.95em;
+    background-color: white; font-size: 0.9em;
     color: var(--text-primary); transition: all 0.2s ease;
     box-shadow: 0 1px 2px rgba(0,0,0,0.03);
     box-sizing: border-box;
@@ -62,10 +63,11 @@ input:checked + .slider-small:before { transform: translateX(14px); }
 .input-icon {
     position: absolute; left: 12px; top: 50%;
     transform: translateY(-50%); color: #9ca3af; pointer-events: none;
+    font-size: 0.9em;
 }
-.input-wrapper .styled-input { padding-left: 36px; }
+.input-wrapper .styled-input { padding-left: 34px; }
 
-/* Старі стилі полів (для сумісності) */
+/* Legacy Fields (Optional, kept for compatibility) */
 .field { display: block; margin: 8px 0; }
 .field input, .field select {
   width: 100%; padding: 8px 10px; border-radius: 10px;
@@ -82,7 +84,7 @@ input:checked + .slider-small:before { transform: translateX(14px); }
     display: none; margin-top: 2px;
 }
 .autocomplete-item {
-    padding: 10px 12px; font-size: 0.9em; color: var(--text-primary);
+    padding: 8px 12px; font-size: 0.9em; color: var(--text-primary);
     cursor: pointer; border-bottom: 1px solid #f1f5f9;
     transition: background-color 0.15s ease; display: flex; flex-direction: column;
 }
