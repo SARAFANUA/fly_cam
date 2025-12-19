@@ -1,5 +1,8 @@
 // js/api/camerasApi.js
 
+// Ключ шифрування (має співпадати з сервером)
+const SECRET_KEY = 'FlyKA_Secure_Key_2024_SOVA';
+
 const DEFAULT_TIMEOUT_MS = 30000;
 
 function withTimeout(makePromise, ms = DEFAULT_TIMEOUT_MS) {
@@ -45,29 +48,49 @@ async function fetchJson(url, signal, errPrefix) {
 
 /**
  * Отримати камери.
- *
- * Підтримані params (бекенд може приймати підмножину — зайве ігнорується):
- * - limit, offset
- * - q (якщо у тебе є загальний пошук)
- * - camera_id_like
- * - oblast, raion, hromada
- * - license_type
- * - analytics_object
- * - camera_status
- * - integration_status
- * - system   (1 вибрана система з інтегрованих, перевірка через LIKE на бекенді або через split)
- * - ka_access
- * - bbox format: "south,west,north,east"
+ * * Включає логіку ДЕШИФРУВАННЯ (AES), якщо сервер повертає payload.
  */
 export async function fetchCameras(params = {}) {
   const url = `/api/cameras${buildQuery(params)}`;
-  return withTimeout((signal) => fetchJson(url, signal, 'fetchCameras failed'));
+  
+  // Отримуємо відповідь сервера
+  const json = await withTimeout((signal) => fetchJson(url, signal, 'fetchCameras failed'));
+
+  // --- ЛОГІКА ДЕШИФРУВАННЯ ---
+  if (json.payload) {
+      try {
+          // Перевіряємо, чи підключена бібліотека CryptoJS
+          if (typeof CryptoJS === 'undefined') {
+              console.error('CRITICAL: CryptoJS library not found. Decryption impossible.');
+              return { items: [] };
+          }
+
+          // 1. Дешифруємо байти
+          const bytes = CryptoJS.AES.decrypt(json.payload, SECRET_KEY);
+          // 2. Перетворюємо в рядок
+          const decryptedString = bytes.toString(CryptoJS.enc.Utf8);
+          
+          if (!decryptedString) {
+              throw new Error('Decryption resulted in empty string (wrong key?)');
+          }
+
+          // 3. Парсимо JSON
+          const data = JSON.parse(decryptedString);
+          return data; // Повертаємо розшифрований об'єкт { items: [...], limit, offset }
+
+      } catch (e) {
+          console.error("Помилка дешифрування даних:", e);
+          return { items: [] };
+      }
+  }
+
+  // Фолбек: якщо дані прийшли не зашифровані (для сумісності)
+  return json;
 }
 
 /**
  * Завантажити довідники фільтрів:
  * GET /api/filters?oblast=...&raion=...
- * Повертає: oblasts, raions, hromadas, systems, camera_statuses, ka_access_values
  */
 export async function fetchFilters(params = {}) {
   const url = `/api/filters${buildQuery(params)}`;
@@ -77,11 +100,22 @@ export async function fetchFilters(params = {}) {
 /**
  * Підказки для camera_id:
  * GET /api/filters/suggest?camera_id_like=...&limit=20
- * Повертає: { ok, items: [{camera_id, camera_name}] }
  */
 export async function fetchCameraIdSuggest(camera_id_like, limit = 20) {
   const url = `/api/filters/suggest${buildQuery({ camera_id_like, limit })}`;
   return withTimeout((signal) => fetchJson(url, signal, 'fetchCameraIdSuggest failed'));
+}
+
+// --- НОВЕ: Пошук регіонів (для автокомпліту) ---
+export async function searchRegion(type, query) {
+    const url = `/api/filters/regions/search${buildQuery({ type, query })}`;
+    try {
+        const json = await withTimeout((signal) => fetchJson(url, signal, 'searchRegion failed'));
+        return json.items || [];
+    } catch (e) {
+        console.warn('Region search error:', e);
+        return [];
+    }
 }
 
 /**
@@ -93,9 +127,7 @@ export async function fetchMeta() {
 }
 
 /**
- * Backward compatibility:
- * Раніше у тебе був /api/cameras/filters — тепер у нас /api/filters
- * Залишаю функцію-аліас, щоб не ламати існуючий фронт.
+ * Backward compatibility
  */
 export async function fetchCameraFilters(params = {}) {
   return fetchFilters(params);
