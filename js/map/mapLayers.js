@@ -1,160 +1,247 @@
-// js/map/mapLayers.js
+/* =========================================================
+   MAP LAYERS – NPU BRAND EDITION
+========================================================= */
 
-/**
- * Ініціалізує контроль базових шарів.
- * @param {L.Map} map - Екземпляр карти Leaflet.
- * @param {Object} baseMaps - Об'єкт з базовими шарами.
- */
 export function setupLayerControls(map, baseMaps) {
+    console.log('[MapLayers] setupLayerControls');
     L.control.layers(baseMaps, null, { collapsed: true }).addTo(map);
 }
 
-// Кеш для шарів
+/* =========================
+   GLOBAL STATE
+========================= */
 const layersCache = {
     oblast: null,
     raion: null,
     hromada: null
 };
 
-// Стилі за замовчуванням (коли нічого не вибрано)
-const DEFAULT_STYLES = {
-    oblast: { color: '#004a99', weight: 1.8, opacity: 0.9, dashArray: '5, 5', fill: false }, 
-    raion: { color: '#454a5eff', weight: 1.5, opacity: 0.8, dashArray: '5, 5', fill: false },
-    hromada: { color: '#999999', weight: 1, opacity: 0.6, fill: false }
+let lastHighlightedCode = null;
+let fitBoundsTimer = null;
+
+/* =========================
+   NPU BRAND COLORS
+========================= */
+const COLORS = {
+    NPU_BLUE: '#152A65',
+    NPU_DARK_BLUE: '#0C183B',
+    NPU_YELLOW: '#FFDD00',
+    NPU_GRAY: '#9D9D9D'
 };
 
-// URL-адреси (локальні)
+/* =========================
+   STYLES
+========================= */
+const DEFAULT_STYLES = {
+    oblast: {
+        color: COLORS.NPU_BLUE,
+        weight: 1.2,
+        opacity: 0.9,
+        fill: false
+    },
+    raion: {
+        color: COLORS.NPU_GRAY,
+        weight: 0.9,
+        opacity: 0.8,
+        dashArray: '4,4',
+        fill: false
+    },
+    hromada: {
+        color: COLORS.NPU_GRAY,
+        weight: 1,
+        opacity: 0.6,
+        fill: false
+    }
+};
+
+/* =========================
+   CONFIG
+========================= */
 const URLS = {
     oblast: 'js/data/oblast.json',
     raion: 'js/data/raion.json',
     hromada: 'js/data/hromada.json'
 };
 
-const ZOOM_THRESHOLDS = { TO_RAION: 8, TO_HROMADA: 10 };
+const ZOOM_THRESHOLDS = {
+    TO_RAION: 8,
+    TO_HROMADA: 10
+};
 
-/**
- * Завантажує GeoJSON.
- */
-async function loadGeoJsonLayer(url, styleOptions, map) {
-    try {
-        const finalUrl = `${url}?t=${Date.now()}`; 
-        const response = await fetch(finalUrl);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        
-        return L.geoJSON(data, {
-            style: styleOptions,
-            interactive: false, 
-            pane: 'bordersPane'
-        });
-    } catch (e) {
-        console.warn(`[MapLayers] Failed to load layer from ${url}`, e);
-        return null;
+/* =========================
+   HELPERS
+========================= */
+function detectLevel(code) {
+    if (!code || !code.startsWith('UA')) return 'unknown';
+    if (/^UA\d{2}0{10}\d{5}$/.test(code)) return 'oblast';
+    if (/^UA\d{4}0{8}\d{5}$/.test(code)) return 'raion';
+    if (/^UA\d{17}$/.test(code)) return 'hromada';
+    return 'unknown';
+}
+
+function getCandidateCodes(props, level) {
+    if (!props) return [];
+    if (level === 'oblast') {
+        return [
+            props['1_id_Область'],
+            props['КАТОТТГ_hromada_L1_id'],
+            props.code
+        ].filter(Boolean);
+    }
+    if (level === 'raion') {
+        return [
+            props['2_id_Район'],
+            props['КАТОТТГ_hromada_L2_id'],
+            props.code
+        ].filter(Boolean);
+    }
+    return [
+        props.katottg,
+        props.katotth_3,
+        props.katottg_3,
+        props.code
+    ].filter(Boolean);
+}
+
+function resetStyles() {
+    for (const type of ['oblast', 'raion', 'hromada']) {
+        const layer = layersCache[type];
+        if (!layer) continue;
+        layer.eachLayer(l => layer.resetStyle(l));
+        layer.setStyle(DEFAULT_STYLES[type]);
     }
 }
 
-/**
- * Оновлює видимість шарів залежно від зуму.
- */
-function updateLayersVisibility(map) {
-    const zoom = map.getZoom();
-    
-    // Визначаємо, які шари мають бути на карті
-    // Якщо зум великий - показуємо детальніші кордони
-    const showOblast = true;
-    const showRaion = zoom >= ZOOM_THRESHOLDS.TO_RAION;
-    const showHromada = zoom >= ZOOM_THRESHOLDS.TO_HROMADA;
+/* =========================
+   LOAD GEOJSON
+========================= */
+async function loadGeoJsonLayer(url, style, map, name) {
+    console.log(`[MapLayers] loading ${name} from`, url);
+    const data = await fetch(`${url}?t=${Date.now()}`).then(r => r.json());
 
-    const toggle = (type, shouldShow) => {
-        const layer = layersCache[type];
-        if (!layer) return; 
+    const layer = L.geoJSON(data, {
+        style,
+        pane: 'bordersPane',
+        interactive: false
+    }).addTo(map);
 
-        if (shouldShow) {
-            if (!map.hasLayer(layer)) {
-                map.addLayer(layer);
-            }
-        } else {
-            if (map.hasLayer(layer)) {
-                map.removeLayer(layer);
-            }
-        }
-    };
-
-    toggle('oblast', showOblast);
-    toggle('raion', showRaion);
-    toggle('hromada', showHromada);
+    console.log(`[MapLayers] ${name} features:`, data.features?.length);
+    return layer;
 }
 
-/**
- * Підсвічує територію (Область, Район або Громаду).
- * Решта карти затемнюється.
- * * @param {string|null} katottgCode - Код КАТОТТГ для виділення (або null для скидання).
- */
-export function highlightTerritory(katottgCode) {
-    // Якщо коду немає - скидаємо стилі на дефолтні
-    if (!katottgCode) {
-        resetStyles();
+/* =========================
+   VISIBILITY
+========================= */
+function updateLayersVisibility(map) {
+    const z = map.getZoom();
+
+    const rules = {
+        oblast: true,
+        raion: z >= ZOOM_THRESHOLDS.TO_RAION,
+        hromada: z >= ZOOM_THRESHOLDS.TO_HROMADA
+    };
+
+    for (const k of Object.keys(layersCache)) {
+        const l = layersCache[k];
+        if (!l) continue;
+        rules[k] ? map.addLayer(l) : map.removeLayer(l);
+    }
+}
+
+/* =========================
+   NAVIGATION LOGIC
+========================= */
+function navigateToRegion(map, bounds, level, codeChanged) {
+    if (!bounds?.isValid()) return;
+
+    const current = map.getBounds();
+    const center = bounds.getCenter();
+
+    if (!codeChanged && current.contains(bounds)) {
+        console.log('[MapLayers] region already in viewport → pan only');
+        map.panTo(center, { animate: true, duration: 0.4 });
         return;
     }
 
-    // console.log(`[MapLayers] Highlighting KATOTTG: ${katottgCode}`);
+    if (!codeChanged) return;
 
-    const applyHighlight = (layer, type) => {
-        if (!layer) return;
+    const maxZoom = level === 'oblast' ? 8 : level === 'raion' ? 11 : 13;
 
-        layer.eachLayer(layerItem => {
-            const props = layerItem.feature.properties;
-            // Перевіряємо відповідність katottg_3 (як у GeoJSON)
-            const featureCode = props.katottg_3 || props.katottg || ''; 
-
-            // Порівнюємо як рядки, щоб уникнути проблем типів
-            if (String(featureCode) === String(katottgCode)) {
-                // ЦЕ ОБРАНА ТЕРИТОРІЯ:
-                // Прозора заливка (щоб бачити карту), яскравий кордон
-                layerItem.setStyle({
-                    fillColor: 'transparent',
-                    fillOpacity: 0,
-                    color: '#FFD700', // Золотий колір кордону
-                    weight: 4,
-                    opacity: 1,
-                    dashArray: null
-                });
-            } else {
-                // ЦЕ НЕВИБРАНА ТЕРИТОРІЯ (ФОН):
-                // Темна напівпрозора заливка (ефект затемнення)
-                layerItem.setStyle({
-                    fillColor: '#000000',
-                    fillOpacity: 0.6, // Сила затемнення
-                    color: '#444',    // Тьмяний кордон
-                    weight: 1,
-                    opacity: 0.3,
-                    dashArray: null
-                });
-            }
+    clearTimeout(fitBoundsTimer);
+    fitBoundsTimer = setTimeout(() => {
+        console.log('[MapLayers] fitBounds to selected region');
+        map.fitBounds(bounds, {
+            padding: [24, 24],
+            maxZoom,
+            animate: true,
+            duration: 0.6
         });
-    };
-
-    // Застосовуємо логіку до всіх активних шарів
-    applyHighlight(layersCache.oblast, 'oblast');
-    applyHighlight(layersCache.raion, 'raion');
-    applyHighlight(layersCache.hromada, 'hromada');
+    }, 250);
 }
 
-/**
- * Повертає стилі до початкового стану.
- */
-function resetStyles() {
-    if (layersCache.oblast) layersCache.oblast.setStyle(DEFAULT_STYLES.oblast);
-    if (layersCache.raion) layersCache.raion.setStyle(DEFAULT_STYLES.raion);
-    if (layersCache.hromada) layersCache.hromada.setStyle(DEFAULT_STYLES.hromada);
+/* =========================
+   HIGHLIGHT
+========================= */
+export function highlightTerritory(code) {
+    console.log('[MapLayers] highlightTerritory:', code);
+
+    if (!code) {
+        resetStyles();
+        lastHighlightedCode = null;
+        return;
+    }
+
+    const targetCode = String(code).trim();
+    const level = detectLevel(targetCode);
+    const map = window.__leafletMap__;
+
+    if (!map || !layersCache[level]) return;
+
+    const codeChanged = targetCode !== lastHighlightedCode;
+    lastHighlightedCode = targetCode;
+
+    resetStyles();
+
+    let unionBounds = null;
+
+    layersCache[level].eachLayer(l => {
+        const props = l.feature?.properties;
+        const match = getCandidateCodes(props, level).includes(targetCode);
+
+        if (match) {
+            const b = l.getBounds?.();
+            if (b?.isValid()) {
+                unionBounds = unionBounds ? unionBounds.extend(b) : b;
+            }
+
+            l.setStyle({
+                color: COLORS.NPU_YELLOW,
+                weight: 4,
+                opacity: 1,
+                fill: false
+            });
+            l.bringToFront?.();
+        } else {
+            l.setStyle({
+                fill: true,
+                fillColor: COLORS.NPU_DARK_BLUE,
+                fillOpacity: 0.12,
+                color: COLORS.NPU_GRAY,
+                weight: 1,
+                opacity: 0.3
+            });
+        }
+    });
+
+    navigateToRegion(map, unionBounds, level, codeChanged);
 }
 
-
-/**
- * Ініціалізація
- */
+/* =========================
+   INIT
+========================= */
 export async function initDynamicAdminBorders(map) {
-    console.log('[MapLayers] Initializing dynamic borders (Highlight support)...');
+    console.log('[MapLayers] INIT dynamic borders');
+    window.__leafletMap__ = map;
 
     if (!map.getPane('bordersPane')) {
         map.createPane('bordersPane');
@@ -162,20 +249,12 @@ export async function initDynamicAdminBorders(map) {
         map.getPane('bordersPane').style.pointerEvents = 'none';
     }
 
-    // Завантаження шарів
-    layersCache.oblast = await loadGeoJsonLayer(URLS.oblast, DEFAULT_STYLES.oblast, map);
-    if (layersCache.oblast) updateLayersVisibility(map);
+    layersCache.oblast  = await loadGeoJsonLayer(URLS.oblast,  DEFAULT_STYLES.oblast,  map, 'oblast');
+    layersCache.raion   = await loadGeoJsonLayer(URLS.raion,   DEFAULT_STYLES.raion,   map, 'raion');
+    layersCache.hromada = await loadGeoJsonLayer(URLS.hromada, DEFAULT_STYLES.hromada, map, 'hromada');
 
-    loadGeoJsonLayer(URLS.raion, DEFAULT_STYLES.raion, map).then(l => {
-        layersCache.raion = l;
-        updateLayersVisibility(map);
-    });
-
-    loadGeoJsonLayer(URLS.hromada, DEFAULT_STYLES.hromada, map).then(l => {
-        layersCache.hromada = l;
-        updateLayersVisibility(map);
-    });
-
-    map.off('zoomend', updateLayersVisibility);
+    updateLayersVisibility(map);
     map.on('zoomend', () => updateLayersVisibility(map));
+
+    console.log('[MapLayers] INIT complete');
 }
