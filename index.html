@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>С.О.В.А. | Система оперативного відео-аналізу</title>
+    <title>С.О.В.А. | Система оперативного відомчого аналізу</title>
     <link rel="icon" href="favicon.png" type="image/png">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -42,8 +42,8 @@
 
             <div class="sidebar-header">
                 <div style="display: flex; flex-direction: column; gap: 5px;">
-                    <h1 style="margin-bottom: 0;">Система оперативного<br>відео-аналізу</h1>
-                    </div>
+                    <h1 style="margin-bottom: 0;">Система Оперативного<br>Відомчого Аналізу</h1>
+                </div>
 
                 <div id="drop-area" class="drop-area">
                     <input type="file" id="file-input" accept=".csv, .xlsx, .xls" multiple hidden>
@@ -151,34 +151,44 @@
                         </div>
                     </section>
 
-                    <section class="panel panel-soft hidden" id="panel-anomalies">
-                        <div class="panel-head">
-                            <h3>Поріг аномалій (затримка)</h3>
-                            <div class="panel-head-actions">
-                                <button class="panel-icon-btn panel-close-btn" data-close-panel="panel-anomalies" title="Закрити">
-                                    <i class="fa-solid fa-xmark"></i>
-                                </button>
+                <section class="panel panel-soft hidden" id="panel-anomalies">
+                    <div class="panel-head">
+                        <h3>Налаштування аномалій</h3>
+                        <div class="panel-head-actions">
+                            <button class="panel-icon-btn panel-close-btn" data-close-panel="panel-anomalies" title="Закрити">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="panel-body">
+                        
+                        <p class="anomaly-description">
+                            Порівняння фактичного часу в дорозі з рекомендованим (OSRM).
+                        </p>
+
+                        <div class="anomaly-controls">
+                            <div class="anomaly-row">
+                                <label for="anomaly-time-warning" class="anomaly-label label-warning">
+                                    <i class="fa-solid fa-clock"></i> Увага (> хв)
+                                </label>
+                                <input type="number" id="anomaly-time-warning" class="anomaly-input" value="40" min="0" max="1440">
                             </div>
+
+                            <div class="anomaly-row">
+                                <label for="anomaly-time-danger" class="anomaly-label label-danger">
+                                    <i class="fa-solid fa-hourglass-end"></i> Критично (> хв)
+                                </label>
+                                <input type="number" id="anomaly-time-danger" class="anomaly-input" value="120" min="0" max="1440">
+                            </div>
+
+                            <button id="btn-update-anomalies" class="btn-primary btn-block">
+                                <i class="fa-solid fa-rotate"></i> Оновити дані
+                            </button>
                         </div>
 
-                        <div class="panel-body" style="display:flex; flex-direction:column; gap:10px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                                <label for="anomaly-warning-input" style="font-size:0.9em; color:var(--warning-color); display:flex; gap:6px; align-items:center; cursor: pointer;">
-                                    <i class="fa-solid fa-triangle-exclamation"></i> Увага (> %)
-                                </label>
-                                <input type="number" id="anomaly-warning-input" value="20" min="0" max="500"
-                                       style="width:90px; padding:6px 8px; border-radius:8px; border:1px solid var(--border-color);">
-                            </div>
-
-                            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                                <label for="anomaly-danger-input" style="font-size:0.9em; color:var(--danger-color); display:flex; gap:6px; align-items:center; cursor: pointer;">
-                                    <i class="fa-solid fa-circle-exclamation"></i> Критично (> %)
-                                </label>
-                                <input type="number" id="anomaly-danger-input" value="100" min="0" max="1000"
-                                       style="width:90px; padding:6px 8px; border-radius:8px; border:1px solid var(--border-color);">
-                            </div>
-                        </div>
-                    </section>
+                    </div>
+                </section>
 
                 </div>
             </div>

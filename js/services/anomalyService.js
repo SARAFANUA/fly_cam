@@ -5,53 +5,56 @@ export const anomalyService = {
         const points = route.normalizedPoints;
         const legs = route.osrmLegs || [];
 
-        // Очищаємо старі дані
+        // 1. Очищаємо старі дані перед перерахунком
         points.forEach(p => {
             delete p.anomalyLevel;
-            delete p.timingInfo;
+            delete p.segmentDuration;
+            delete p.expectedDuration;
         });
 
-        // Якщо немає даних від OSRM, ми не можемо рахувати аномалії
-        if (!legs || legs.length === 0) return;
-
         // legs[i] відповідає сегменту від points[i] до points[i+1]
-        // Але оскільки ми могли запитувати маршрут чанками, потрібно бути обережним з індексами.
-        // Для спрощення припускаємо, що points і legs синхронізовані (1 до 1, окрім останньої точки).
-        
         let legIndex = 0;
 
         for (let i = 0; i < points.length - 1; i++) {
             const startPoint = points[i];
             const endPoint = points[i + 1];
 
-            // Фактичний час
+            // А. Фактичний час (різниця timestamps)
             const t1 = new Date(startPoint.timestamp).getTime();
             const t2 = new Date(endPoint.timestamp).getTime();
-            const factDurationSec = (t2 - t1) / 1000;
-
-            // Еталонний час (OSRM)
-            const osrmLeg = legs[legIndex];
-            // Якщо масиви розсинхронізовані (наприклад через чанки), це проста евристика.
-            // В ідеалі треба склеювати legs при запиті.
             
-            if (osrmLeg) {
-                const osrmDurationSec = osrmLeg.duration;
+            // Час у секундах
+            const factDurationSec = (t2 - t1) / 1000;
+            
+            // ЗАПИСУЄМО В КОРІНЬ ОБ'ЄКТА (саме це поле шукає таблиця!)
+            endPoint.segmentDuration = Math.round(factDurationSec);
 
-                if (osrmDurationSec > 0 && factDurationSec > 0) {
-                    const diffPercent = ((factDurationSec - osrmDurationSec) / osrmDurationSec) * 100;
-                    
-                    let status = 'normal';
-                    if (diffPercent >= thresholds.danger) status = 'high';
-                    else if (diffPercent >= thresholds.warning) status = 'medium';
+            // Б. Еталонний час (OSRM)
+            if (legs && legs[legIndex]) {
+                const osrmDurationSec = legs[legIndex].duration;
+                
+                // ЗАПИСУЄМО В КОРІНЬ ОБ'ЄКТА
+                endPoint.expectedDuration = Math.round(osrmDurationSec);
 
-                    endPoint.anomalyLevel = status === 'normal' ? null : status;
-                    
-                    endPoint.timingInfo = {
-                        expected: Math.round(osrmDurationSec),
-                        actual: Math.round(factDurationSec),
-                        diff: Math.round(factDurationSec - osrmDurationSec),
-                        percent: Math.round(diffPercent)
-                    };
+                // В. Перевірка аномалій (Тільки якщо є обидва значення)
+                if (osrmDurationSec > 0) {
+                    // Різниця в хвилинах
+                    const diffMin = (factDurationSec - osrmDurationSec) / 60;
+
+                    // Пороги (використовуємо timeWarning/timeDanger)
+                    const limitWarn = thresholds.timeWarning !== undefined ? thresholds.timeWarning : 40;
+                    const limitDanger = thresholds.timeDanger !== undefined ? thresholds.timeDanger : 120;
+
+                    let level = null;
+                    if (diffMin >= limitDanger) {
+                        level = 'high';   // Червоний
+                    } else if (diffMin >= limitWarn) {
+                        level = 'medium'; // Жовтий
+                    }
+
+                    if (level) {
+                        endPoint.anomalyLevel = level;
+                    }
                 }
                 legIndex++;
             }

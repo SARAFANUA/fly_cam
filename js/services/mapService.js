@@ -1,8 +1,8 @@
 // js/services/mapService.js
 import * as markerRenderer from '../map/markerRenderer.js';
 import * as colorUtils from '../utils/colorUtils.js';
-import { getRouteData } from '../api/routingService.js'; // Змінено імпорт
-import { anomalyService } from './anomalyService.js'; // Підключено сервіс
+import { getRouteData } from '../api/routingService.js';
+import { anomalyService } from './anomalyService.js';
 
 export const mapService = {
     map: null,
@@ -19,23 +19,33 @@ export const mapService = {
         const visibleRoutes = Array.from(store.routes.values()).filter(r => r.isVisible);
         let index = 0;
 
+        // Дефолтні налаштування аномалій, якщо їх немає в store
+        const thresholds = store.anomalyThresholds || { timeWarning: 40, timeDanger: 120 };
+
         for (const route of store.routes.values()) {
             const color = colorUtils.getRouteColor(route.id);
             store.routeColorMap.set(route.id, color);
 
             if (route.isVisible) {
-                // 1. Отримуємо дані маршруту (якщо їх немає)
+                // 1. Отримуємо дані маршруту (OSRM), якщо їх немає
                 if (!route.osrmCoordinates || !route.osrmLegs) {
-                    const latLngs = route.normalizedPoints.map(p => [p.latitude, p.longitude]);
-                    const data = await getRouteData(latLngs, store.vehicleType);
-                    
-                    route.osrmCoordinates = data.coordinates;
-                    route.osrmLegs = data.legs;
+                    try {
+                        const latLngs = route.normalizedPoints.map(p => [p.latitude, p.longitude]);
+                        // Запит до OSRM
+                        const data = await getRouteData(latLngs, store.vehicleType);
+                        
+                        if (data) {
+                            route.osrmCoordinates = data.coordinates;
+                            route.osrmLegs = data.legs;
+                        }
+                    } catch (e) {
+                        console.error(`Error calculating route for ${route.fileName}:`, e);
+                    }
                 }
 
-                // 2. Рахуємо аномалії
+                // 2. Рахуємо аномалії (передаємо маршрут і пороги)
                 if (anomalyService) {
-                    anomalyService.calculate(route, store.anomalyThresholds || { warning: 20, danger: 100 });
+                    anomalyService.calculate(route, thresholds);
                 }
 
                 // 3. Рендеримо
@@ -57,22 +67,33 @@ export const mapService = {
     async refreshRouteGeometry(store, routeId, onPointMove) {
         const route = store.routes.get(routeId);
         if(route) {
+            // Скидаємо кеш OSRM, щоб перерахувати маршрут для нової геометрії
             route.osrmCoordinates = null; 
             route.osrmLegs = null;
         }
         await this.renderAll(store, onPointMove); 
     },
 
+    // Цей метод викликається кнопкою "Оновити дані" в панелі Аномалій
     async updateAnalyticsOnly(store) {
+        // Очищаємо, щоб перемалювати кольори
         markerRenderer.clearAllMarkers();
+        
         const visibleRoutes = Array.from(store.routes.values()).filter(r => r.isVisible);
         let index = 0;
+        
+        const thresholds = store.anomalyThresholds || { timeWarning: 40, timeDanger: 120 };
 
         for (const route of store.routes.values()) {
              if (route.isVisible) {
-                if (anomalyService) anomalyService.calculate(route, store.anomalyThresholds);
+                // Перераховуємо статуси точок (high/medium/normal)
+                if (anomalyService) {
+                    anomalyService.calculate(route, thresholds);
+                }
+                
                 const color = store.routeColorMap.get(route.id);
                 
+                // Рендеримо заново (щоб маркери змінили колір, якщо треба)
                 await markerRenderer.renderMarkers(
                     route, this.map, color, store.isClusteringEnabled, 
                     store.globalDateFilter, { index, total: visibleRoutes.length },
@@ -84,12 +105,12 @@ export const mapService = {
         }
     },
     
-    // Zoom методи без змін
     zoomToRoute(route) {
         if (!route || !route.isVisible || route.normalizedPoints.length === 0) return;
         const latlngs = route.normalizedPoints.map(p => [p.latitude, p.longitude]);
         this.map.fitBounds(L.latLngBounds(latlngs), { padding: [50, 50] });
     },
+    
     zoomToFiltered(route, dateFilter) {
         if (!route || !route.isVisible) return;
         let points = route.normalizedPoints;

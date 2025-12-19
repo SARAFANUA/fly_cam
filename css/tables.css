@@ -1,7 +1,8 @@
 /* css/tables.css */
 
-/* Скидання стилів списку */
-#modal-points-list {
+/* --- Скидання стилів списку (для ul) --- */
+#modal-points-list,
+#points-list-items {
     display: block !important;
     list-style: none !important;
     padding: 0 !important;
@@ -9,95 +10,179 @@
     width: 100% !important;
 }
 
-
-/* ОНОВЛЕНА СІТКА: 3 КОЛОНКИ (ID | TIME | DIFF) */
+/* --- ОНОВЛЕНА СІТКА: 3 КОЛОНКИ (ID | TIME | DIFF) --- */
+/* Цей клас застосовується і до хедера, і до рядків */
 .points-grid-layout {
     display: grid !important;
-    /* ID | DATE/TIME (125px) | DIFF (auto) */
-    grid-template-columns: 40px 125px 1fr !important; 
-    gap: 10px !important;
+    /* ID (40px) | DATE/TIME (125px) | DIFF (auto - решта місця) */
+    grid-template-columns: 45px 130px 1fr !important; 
+    gap: 8px !important;
     align-items: center !important;
     box-sizing: border-box !important;
     width: 100% !important;
     padding: 8px 12px !important;
 }
 
-/* Стиль Хедера (Заголовка) */
+/* --- Стиль Хедера (Заголовка таблиці) --- */
 .points-table-header {
-    background-color: #f1f5f9;
-    border-bottom: 2px solid #cbd5e1;
-    color: #64748b;
+    background-color: #f8fafc; /* Slate-50 */
+    border-bottom: 2px solid #cbd5e1; /* Slate-300 */
+    color: #64748b; /* Slate-500 */
     font-size: 0.75em;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     position: sticky;
     top: 0;
-    z-index: 100; /* Щоб був поверх скролу */
+    z-index: 10; /* Щоб був поверх скролу */
 }
 
-/* Стиль Рядка */
+/* --- Стиль Рядка (Row) --- */
 .point-list-row {
     background-color: #ffffff;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0; /* Slate-200 */
     font-size: 0.9em;
-    color: #334155;
+    color: #334155; /* Slate-700 */
     cursor: pointer;
-    
+    transition: background-color 0.15s ease;
+
     /* ВАЖЛИВО: Заборона переносу тексту, щоб таблиця не стрибала */
     white-space: nowrap !important;
     overflow: hidden !important; 
 }
 
-/* Зебра і Ховер */
-.point-list-row:nth-child(even) { background-color: #fafafa; }
-.point-list-row:hover { background-color: #f1f5f9; }
+/* Зебра (парні рядки трохи темніші) */
+.point-list-row:nth-child(even) { 
+    background-color: #f8fafc; 
+}
 
-/* Активний рядок */
+/* Ховер ефект */
+.point-list-row:hover { 
+    background-color: #f1f5f9; /* Slate-100 */
+}
+
+/* Активний рядок (вибраний) */
 .point-list-row.active-row {
-    background-color: #eff6ff !important;
+    background-color: #eff6ff !important; /* Blue-50 */
     box-shadow: inset 3px 0 0 var(--primary-color);
 }
 
-/* Підсвітка аномалій */
-.row-warning { background-color: #fffbeb !important; } 
-.row-danger { background-color: #fef2f2 !important; }
+/* --- Підсвітка аномалій (на рівні всього рядка) --- */
+.row-warning { 
+    background-color: #fffbeb !important; /* Amber-50 */
+} 
+.row-warning:hover {
+    background-color: #fef3c7 !important; /* Amber-100 */
+}
 
-/* --- Колонка: Індекс --- */
+.row-danger { 
+    background-color: #fef2f2 !important; /* Red-50 */
+}
+.row-danger:hover {
+    background-color: #fee2e2 !important; /* Red-100 */
+}
+
+/* --- Стилі Колонок --- */
+
+/* Колонка: Індекс (#) */
 .col-idx {
-    color: #94a3b8; text-align: center; font-size: 0.85em;
+    color: #94a3b8; /* Slate-400 */
+    text-align: center; 
+    font-size: 0.85em;
+    font-weight: 500;
 }
 
-/* --- Колонка: Час --- */
+/* Колонка: Час */
 .col-time {
-    font-weight: 600; color: #0f172a;
-    font-family: 'Roboto Mono', 'SF Mono', monospace;
+    font-weight: 600; 
+    color: #0f172a; /* Slate-900 */
+    font-family: 'Roboto Mono', 'SF Mono', Consolas, monospace;
 }
 
-/* --- Колонка: Значення --- */
-.col-val {
-    text-align: right;
-    font-family: 'Roboto Mono', monospace;
-    color: #475569;
-}
-.col-val.faded { color: #cbd5e1; font-weight: 300; }
-
-/* --- Колонка: Різниця (Wrapper) --- */
+/* Колонка: Різниця (Обгортка для вирівнювання праворуч) */
 .col-diff-wrapper {
-    display: flex; justify-content: flex-end; align-items: center;
+    display: flex; 
+    justify-content: flex-end; 
+    align-items: center;
+    width: 100%;
 }
 
-/* --- Бейджі (Tag) --- */
+/* --- Бейджі (Tag/Badge) --- */
 .status-tag {
-    display: inline-flex; align-items: center; justify-content: flex-end;
-    gap: 6px; padding: 2px 6px; border-radius: 4px;
-    font-size: 0.85em; font-family: 'Roboto Mono', monospace;
-    font-weight: 500; min-width: 85px; border: 1px solid transparent;
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: flex-end; /* Текст всередині бейджа праворуч */
+    gap: 6px; 
+    padding: 3px 8px; 
+    border-radius: 6px;
+    font-size: 0.85em; 
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 600; 
+    min-width: 90px; /* Фіксована ширина, щоб цифри були одна під одною */
+    border: 1px solid transparent;
+    line-height: 1.2;
 }
-.status-tag small { font-size: 0.85em; opacity: 0.7; font-weight: 400; }
+
+.status-tag small { 
+    font-size: 0.85em; 
+    opacity: 0.8; 
+    font-weight: 400; 
+    margin-left: 4px;
+}
 
 /* Кольори статусів */
-.tag-neutral { background: #f1f5f9; color: #94a3b8; }
-.tag-warning { background: #fffbeb; color: #b45309; border-color: #fcd34d; }
-.tag-danger  { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
-.tag-success { background: #f0fdf4; color: #166534; border-color: #86efac; }
+.tag-neutral { 
+    background: #f1f5f9; 
+    color: #94a3b8; 
+    border-color: #e2e8f0;
+}
+.tag-success { 
+    background: #f0fdf4; /* Green-50 */
+    color: #166534;       /* Green-800 */
+    border-color: #bbf7d0; 
+}
+.tag-warning { 
+    background: #fffbeb; /* Amber-50 */
+    color: #b45309;      /* Amber-700 */
+    border-color: #fcd34d; 
+}
+.tag-danger { 
+    background: #fef2f2; /* Red-50 */
+    color: #b91c1c;      /* Red-700 */
+    border-color: #fecaca; 
+}
+
+/* --- Summary Section (Блок статистики над списком) --- */
+.route-summary-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+    background: #fff;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.summary-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8em;
+    color: var(--text-color);
+    background: var(--bg-soft);
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+.summary-badge i {
+    color: var(--primary-color);
+}
+
+/* --- Порожній список --- */
+.empty-list-item {
+    padding: 30px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.9em;
+    font-style: italic;
+    background: #f8fafc;
+}

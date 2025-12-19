@@ -89,6 +89,73 @@ function bindPanelsUI() {
     window.addEventListener('resize', () => syncPanelsUI());
 }
 
+// --- ОНОВЛЕНА ФУНКЦІЯ ---
+function initAnomalySettings() {
+    console.log('[Main] initAnomalySettings started...');
+
+    const timeWarnInput = document.getElementById('anomaly-time-warning');
+    const timeDangerInput = document.getElementById('anomaly-time-danger');
+    const updateBtn = document.getElementById('btn-update-anomalies');
+
+    if (!timeWarnInput || !timeDangerInput) return;
+
+    // 1. Визначаємо дефолтні значення (з HTML або жорстко задані)
+    const defaultWarn = parseInt(timeWarnInput.getAttribute('value')) || 40;
+    const defaultDanger = parseInt(timeDangerInput.getAttribute('value')) || 120;
+
+    // 2. Ініціалізуємо або оновлюємо store
+    if (!store.anomalyThresholds) {
+        store.anomalyThresholds = { 
+            timeWarning: defaultWarn, 
+            timeDanger: defaultDanger 
+        };
+    } else {
+        // Якщо в store є об'єкт, але немає нових ключів (стара версія store), додаємо їх
+        if (store.anomalyThresholds.timeWarning === undefined) {
+            store.anomalyThresholds.timeWarning = defaultWarn;
+        }
+        if (store.anomalyThresholds.timeDanger === undefined) {
+            store.anomalyThresholds.timeDanger = defaultDanger;
+        }
+    }
+
+    // 3. Записуємо актуальні значення в інпути
+    timeWarnInput.value = store.anomalyThresholds.timeWarning;
+    timeDangerInput.value = store.anomalyThresholds.timeDanger;
+
+    console.log('[Main] Settings applied:', store.anomalyThresholds);
+
+    // 4. Обробка кліку на кнопку "Оновити"
+    if (updateBtn) {
+        updateBtn.onclick = () => {
+            const w = parseInt(timeWarnInput.value) || 0;
+            const d = parseInt(timeDangerInput.value) || 0;
+
+            // Зберігаємо в стейт
+            store.anomalyThresholds.timeWarning = w;
+            store.anomalyThresholds.timeDanger = d;
+
+            // Оновлюємо карту
+            mapService.updateAnalyticsOnly(store);
+
+            // Оновлюємо таблицю (якщо відкрита)
+            renderDetailsInSidebar();
+
+            // Оновлюємо модалку (якщо відкрита)
+            const modalList = document.getElementById('modal-points-list');
+            if (modalList && !document.getElementById('modal-container').classList.contains('hidden')) {
+                const route = store.routes.get(store.activeRouteId);
+                if (route) {
+                    // Перевідкриваємо модалку для оновлення даних
+                    document.getElementById('open-details-modal-btn').click(); 
+                }
+            }
+
+            showMessage('Налаштування аномалій оновлено', 'success');
+        };
+    }
+}
+
 async function updateApp() {
     await mapService.renderAll(store, handlePointMove);
 
@@ -192,16 +259,12 @@ function handleDateFilter(date, event) {
 
 /** DOM Ready */
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Ініціалізація карти (використовуємо глобальну змінну map)
     map = initializeMap();
     mapService.init(map);
     cameraRenderer.setMapInstance(map);
-
-    // 2. Ініціалізація шару війни (правильно передаємо map)
     initWarLayer(map);
-
-    // 3. Ініціалізація панелі камер
     initCameraPanel(map);
+    initAnomalySettings();
 
     const ui = getElements();
 
@@ -284,27 +347,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-
-    const warnInput = document.getElementById('anomaly-warning-input');
-    const dangerInput = document.getElementById('anomaly-danger-input');
-
-    if (warnInput) {
-        warnInput.value = store.anomalyThresholds?.warning || 20;
-        warnInput.onchange = (e) => {
-            if (!store.anomalyThresholds) store.anomalyThresholds = { warning: 20, danger: 100 };
-            store.anomalyThresholds.warning = Number(e.target.value);
-            mapService.updateAnalyticsOnly(store);
-        };
-    }
-
-    if (dangerInput) {
-        dangerInput.value = store.anomalyThresholds?.danger || 100;
-        dangerInput.onchange = (e) => {
-            if (!store.anomalyThresholds) store.anomalyThresholds = { warning: 20, danger: 100 };
-            store.anomalyThresholds.danger = Number(e.target.value);
-            mapService.updateAnalyticsOnly(store);
-        };
-    }
 
     const overlay = ui.modalOverlay;
     const toggleOverlayBtn = document.getElementById('toggle-overlay-btn');
