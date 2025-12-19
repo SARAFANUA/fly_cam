@@ -112,7 +112,7 @@
     position: absolute;
     top: 0;
     right: 0;
-    width: 380px;
+    width: 450px;
     height: 100%;
     background-color: var(--lighter-bg);
     box-shadow: -2px 0 10px rgba(0,0,0,0.1);
@@ -142,9 +142,6 @@
 }
 .sidebar-toggle-btn.right:hover { width: 30px; }
 
-/* css/sidebar-layout.css */
-
-/* ... (ваш код вище без змін) ... */
 
 /* === ВИПРАВЛЕННЯ ПРАВОГО САЙДБАРУ (Flex Layout) === */
 

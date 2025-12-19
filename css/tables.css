@@ -9,13 +9,12 @@
     width: 100% !important;
 }
 
-/* ЄДИНА СІТКА ДЛЯ ЗАГОЛОВКА І РЯДКІВ 
-   Налаштування колонок:
-   Index | Time | Plan | Fact | Diff (Fixed width for badges)
-*/
+
+/* ОНОВЛЕНА СІТКА: 3 КОЛОНКИ (ID | TIME | DIFF) */
 .points-grid-layout {
     display: grid !important;
-    grid-template-columns: 40px 60px 1fr 1fr 110px !important;
+    /* ID | DATE/TIME (125px) | DIFF (auto) */
+    grid-template-columns: 40px 125px 1fr !important; 
     gap: 10px !important;
     align-items: center !important;
     box-sizing: border-box !important;

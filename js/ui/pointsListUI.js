@@ -11,21 +11,24 @@ function isSidebarList(uiRefs) {
     return uiRefs?.list?.id === 'points-list-items';
 }
 
-function timeHHMM(ts) {
-    return new Date(ts).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+// Функція форматування дати та часу (ДД.ММ.РРРР ГГ:ХХ)
+function formatDateTime(ts) {
+    return new Date(ts).toLocaleString('uk-UA', {
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit', 
+        minute: '2-digit'
+    }).replace(',', '');
 }
 
 function buildDiffTag(point) {
     let anomalyClass = '';
+    // За замовчуванням (якщо немає даних OSRM)
     let diffHtml = '<span class="status-tag tag-neutral" style="justify-content:center;">—</span>';
-    let planText = '<span class="faded">—</span>';
-    let factText = '<span class="faded">—</span>';
 
     if (point.timingInfo) {
-        const { expected, actual, diff, percent } = point.timingInfo;
-
-        planText = formatDuration(expected);
-        factText = formatDuration(actual);
+        const { diff, percent } = point.timingInfo;
 
         const sign = diff > 0 ? '+' : '';
         const absPercent = Math.abs(Math.round(percent));
@@ -52,7 +55,8 @@ function buildDiffTag(point) {
         `;
     }
 
-    return { anomalyClass, diffHtml, planText, factText };
+    // Повертаємо тільки те, що потрібно для відображення
+    return { anomalyClass, diffHtml };
 }
 
 export function renderPointsList(route, state, uiRefs, actions) {
@@ -77,14 +81,11 @@ export function renderPointsList(route, state, uiRefs, actions) {
         return;
     }
 
-    // HEADER (sticky)
-    // У сайдбарі в першій колонці показуємо "ID/#" (оригінал/після фільтра)
+    // HEADER: 3 колонки (ID | ДАТА/ЧАС | ВІДХИЛЕННЯ)
     uiRefs.summary.innerHTML = `
         <div class="points-table-header points-grid-layout">
             <span style="text-align:center">${sidebarMode ? 'ID/#' : '#'}</span>
-            <span>ЧАС</span>
-            <span style="text-align:right">ПЛАН</span>
-            <span style="text-align:right">ФАКТ</span>
+            <span>ДАТА/ЧАС</span>
             <span style="text-align:right">ВІДХИЛЕННЯ</span>
         </div>
     `;
@@ -96,18 +97,16 @@ export function renderPointsList(route, state, uiRefs, actions) {
         const li = document.createElement('li');
         li.className = 'point-list-row points-grid-layout';
 
-        const { anomalyClass, diffHtml, planText, factText } = buildDiffTag(point);
+        // Розрахунок тега відхилення
+        const { anomalyClass, diffHtml } = buildDiffTag(point);
         if (anomalyClass) li.classList.add(anomalyClass);
 
-        const timeStr = timeHHMM(point.timestamp);
-
-        // originalIndex: позиція в повному масиві (як у файлі)
+        // Форматування дати і часу
+        const timeStr = formatDateTime(point.timestamp);
+        
         const originalIndex = route.normalizedPoints.indexOf(point);
         li.dataset.originalIndex = originalIndex;
 
-        // COL IDX:
-        // - sidebar: показуємо original+1 та filtered+1 (два рядки)
-        // - modal: показуємо лише filtered+1
         const idxHtml = sidebarMode
             ? `
                 <div class="col-idx" style="display:flex; flex-direction:column; align-items:center; line-height:1.05;">
@@ -117,11 +116,10 @@ export function renderPointsList(route, state, uiRefs, actions) {
               `
             : `<span class="col-idx">${filteredIndex + 1}</span>`;
 
+        // ROW HTML
         li.innerHTML = `
             ${idxHtml}
-            <span class="col-time">${timeStr}</span>
-            <span class="col-val">${planText}</span>
-            <span class="col-val" style="font-weight:700; color:#1e293b;">${factText}</span>
+            <span class="col-time" style="font-size: 0.9em;">${timeStr}</span>
             <div class="col-diff-wrapper">${diffHtml}</div>
         `;
 
@@ -141,7 +139,6 @@ export function renderPointsList(route, state, uiRefs, actions) {
     uiRefs.list.appendChild(fragment);
 }
 
-// renderUniqueDates — без змін
 export function renderUniqueDates(container, state, actions) {
     const dateCounts = new Map();
     const sourcePoints = state.routes.size > 0
