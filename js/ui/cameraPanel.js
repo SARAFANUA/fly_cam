@@ -3,6 +3,7 @@
 import * as cameraRenderer from '../map/cameraRenderer.js';
 import { initCameraFilters } from './cameraFilters.js';
 import { getElements } from './dom.js';
+import { highlightTerritory } from '../map/mapLayers.js'; // ІМПОРТУЄМО НОВУ ФУНКЦІЮ
 
 let mapInstance = null;
 let camerasVisible = false; 
@@ -102,37 +103,28 @@ function buildCameraPanelHtml() {
   `;
 }
 
-// --- Фіксований футер для кнопки оновлення ---
 function ensureSyncButtonFooter(sidebarContent) {
     if (document.getElementById('camera-sidebar-footer')) return;
-
     const footer = document.createElement('div');
     footer.id = 'camera-sidebar-footer';
-    
-    // Компактний стиль для футера
     footer.innerHTML = `
         <button id="sync-db-btn" type="button">
             <i class="fa-solid fa-rotate"></i> Оновити базу камер
         </button>
         <div id="sync-status" style="font-size: 0.7em; color: #888; margin-top: 4px; text-align: center;"></div>
     `;
-    
     sidebarContent.appendChild(footer);
-
     const syncBtn = footer.querySelector('#sync-db-btn');
     const syncStatus = footer.querySelector('#sync-status');
 
     syncBtn.onclick = async () => {
         if (!confirm('Оновити базу даних камер з Google Таблиць? Це може зайняти час.')) return;
-        
         syncBtn.disabled = true;
         syncBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Оновлення...';
         syncStatus.textContent = 'З\'єднання з сервером...';
-
         try {
             const res = await fetch('/api/sync', { method: 'POST' });
             const data = await res.json();
-
             if (data.ok) {
                 const count = data.rows_upserted || 0;
                 syncStatus.textContent = `Успішно! Оновлено: ${count} камер.`;
@@ -192,6 +184,23 @@ function togglePanel(isOpen) {
     }
 }
 
+// --- ВИЗНАЧЕННЯ АКТИВНОЇ ТЕРИТОРІЇ ---
+function updateTerritoryHighlight(filters) {
+    // Шукаємо найдетальніший рівень фільтрації
+    let targetCode = null;
+
+    if (filters.hromada) {
+        targetCode = filters.hromada;
+    } else if (filters.raion) {
+        targetCode = filters.raion;
+    } else if (filters.oblast) {
+        targetCode = filters.oblast;
+    }
+
+    // Викликаємо функцію з mapLayers.js
+    highlightTerritory(targetCode);
+}
+
 export function initCameraPanel(map) {
   mapInstance = map;
   const ui = getElements();
@@ -225,6 +234,11 @@ export function initCameraPanel(map) {
   initCameraFilters({ 
       onChange: (filters) => {
           lastFilters = filters;
+          
+          // 1. Оновлюємо підсвітку території
+          updateTerritoryHighlight(filters);
+
+          // 2. Оновлюємо камери
           if (camerasVisible) {
               reloadWithCurrentSettings().catch(console.error);
           }
