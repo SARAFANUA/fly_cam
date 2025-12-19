@@ -14,12 +14,79 @@ function safeNum(v) {
   return Number.isFinite(n) ? n : null;
 }
 
-function buildPopup(camera) {
-  const entries = Object.entries(camera || {}).filter(([_, v]) => v !== null && v !== undefined && v !== '');
-  const rows = entries
-    .map(([k, v]) => `<li><strong>${k}:</strong> ${String(v)}</li>`)
-    .join('');
-  return `<h4>Камера</h4><ul>${rows}</ul>`;
+// --- НОВА ФУНКЦІЯ POPUP (Картка камери) ---
+function buildPopup(p) {
+  // 1. Логіка статусу
+  const status = (p.camera_status || '').toLowerCase().trim();
+  let statusClass = 'status-gray';
+  let statusIcon = '<i class="fa-solid fa-circle-question"></i>';
+
+  if (status.includes('працює') && !status.includes('не')) {
+      statusClass = 'status-green'; 
+      statusIcon = '<i class="fa-solid fa-check-circle"></i>';
+  } else if (status.includes('не працює') || status.includes('тимчасово')) {
+      statusClass = 'status-yellow';
+      statusIcon = '<i class="fa-solid fa-triangle-exclamation"></i>';
+  }
+
+  // 2. Формування адреси
+  const settlement = [p.settlement_type, p.settlement_name].filter(Boolean).join(' ');
+  const street = p.highway_number 
+      ? `🛣️ ${p.highway_number}` 
+      : [p.street_type, p.street_name].filter(Boolean).join(' ');
+
+  // 3. Локація (Область, Район, Громада)
+  const locationStr = [p.oblast, p.raion ? p.raion + ' р-н' : '', p.hromada ? p.hromada + ' ТГ' : '']
+      .filter(Boolean)
+      .join(', ');
+
+  // 4. Поля
+  const camName = p.camera_name || 'Камера без назви';
+  const camId = p.camera_id || 'ID відсутній';
+  const kaAccess = p.ka_access || '—';
+  const integSystem = p.integrated_systems || '';
+  const license = p.license_type || '';
+  const analytics = p.analytics_object || '';
+
+  // 5. HTML Шаблон
+  return `
+      <div class="camera-popup-card">
+          <div class="popup-header">
+              <h3>${camName}</h3>
+              <div class="popup-subtitle">${camId}</div>
+          </div>
+
+          <div class="popup-body">
+              <div class="popup-row location-row">
+                  <i class="fa-solid fa-location-dot"></i>
+                  <div>
+                      <div class="location-main">${settlement}</div>
+                      <div class="location-sub">${street}</div>
+                      <div class="location-meta">${locationStr}</div>
+                  </div>
+              </div>
+
+              <div class="popup-badge ${statusClass}">
+                  ${statusIcon} <span>${p.camera_status || 'Статус невідомий'}</span>
+              </div>
+
+              <div class="popup-grid">
+                  ${license ? `<div class="info-item"><strong>Функціонал:</strong> ${license}</div>` : ''}
+                  ${analytics ? `<div class="info-item"><strong>Об'єкт:</strong> ${analytics}</div>` : ''}
+              </div>
+
+              <div class="popup-row access-row">
+                  <strong>Доступ КА:</strong> 
+                  <span class="ka-val ${kaAccess.toLowerCase() === 'так' ? 'text-green' : 'text-red'}">${kaAccess}</span>
+              </div>
+          </div>
+
+          ${integSystem ? `
+          <div class="popup-footer">
+              <div class="popup-subtitle" title="Інтегрована система">${integSystem}</div>
+          </div>` : ''}
+      </div>
+  `;
 }
 
 function formatCount(n) {
