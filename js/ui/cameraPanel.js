@@ -32,7 +32,7 @@ function buildCameraPanelHtml() {
       </div>
 
       <div class="field-group">
-        <label class="field-label">ID камери</label>
+        <label class="field-label" for="filter-camera-id">ID камери</label>
         <div class="input-wrapper">
             <i class="fa-solid fa-magnifying-glass input-icon"></i>
             <input id="filter-camera-id" class="styled-input" placeholder="Введіть ID..." autocomplete="off"/>
@@ -42,7 +42,7 @@ function buildCameraPanelHtml() {
 
       <div class="region-filters-block">
           <div class="field-group">
-            <label class="field-label">Громада <span class="hint">(автозаповнення)</span></label>
+            <label class="field-label" for="filter-hromada">Громада <span class="hint">(автозаповнення)</span></label>
             <div class="input-wrapper">
                 <input id="filter-hromada" class="styled-input" placeholder="Почніть вводити назву..." autocomplete="off"/>
                 <div id="dropdown-hromada" class="autocomplete-dropdown"></div>
@@ -51,14 +51,14 @@ function buildCameraPanelHtml() {
 
           <div class="grid-2">
             <div class="field-group">
-                <label class="field-label">Район</label>
+                <label class="field-label" for="filter-raion">Район</label>
                 <div class="input-wrapper">
                     <input id="filter-raion" class="styled-input" placeholder="Район" autocomplete="off"/>
                     <div id="dropdown-raion" class="autocomplete-dropdown"></div>
                 </div>
             </div>
             <div class="field-group">
-                <label class="field-label">Область</label>
+                <label class="field-label" for="filter-oblast">Область</label>
                 <div class="input-wrapper">
                     <input id="filter-oblast" class="styled-input" placeholder="Область" autocomplete="off"/>
                     <div id="dropdown-oblast" class="autocomplete-dropdown"></div>
@@ -68,27 +68,27 @@ function buildCameraPanelHtml() {
       </div>
       
       <div class="field-group">
-         <label class="field-label">Функціонал</label>
+         <label class="field-label" for="filter-license-type">Функціонал</label>
          <select id="filter-license-type" class="styled-select"></select>
       </div>
       <div class="field-group">
-         <label class="field-label">Об'єкт аналітики</label>
+         <label class="field-label" for="filter-analytics-object">Об'єкт аналітики</label>
          <select id="filter-analytics-object" class="styled-select"></select>
       </div>
       
       <div class="grid-2">
         <div class="field-group">
-            <label class="field-label">Стан</label>
+            <label class="field-label" for="filter-camera-status">Стан</label>
             <select id="filter-camera-status" class="styled-select"></select>
         </div>
         <div class="field-group">
-            <label class="field-label">КА доступ</label>
+            <label class="field-label" for="filter-ka-access">КА доступ</label>
             <select id="filter-ka-access" class="styled-select"></select>
         </div>
       </div>
       
       <div class="field-group">
-        <label class="field-label">Інтегрована система</label>
+        <label class="field-label" for="filter-system">Інтегрована система</label>
         <select id="filter-system" class="styled-select"></select>
       </div>
 
@@ -219,16 +219,17 @@ export function initCameraPanel(map) {
       ui.closeCameraPanelBtn.onclick = () => togglePanel(false);
   }
 
-//   // Слухач руху карти (BBOX)
-//   let moveTimeout;
-//   map.on('moveend', () => {
-//       if (camerasVisible ) { //&& ui.sidebarRight.classList.contains('open')
-//           clearTimeout(moveTimeout);
-//           moveTimeout = setTimeout(() => {
-//               reloadWithCurrentSettings().catch(console.error);
-//           }, 500); 
-//       }
-//   });
+  // Слухач руху карти (BBOX)
+  let moveTimeout;
+  map.on('moveend', () => {
+      // Оновлюємо, якщо камери увімкнені (незалежно від стану сайдбару)
+      if (camerasVisible) {
+          clearTimeout(moveTimeout);
+          moveTimeout = setTimeout(() => {
+              reloadWithCurrentSettings().catch(console.error);
+          }, 500); 
+      }
+  });
 
   // Ініціалізація логіки фільтрів
   initCameraFilters({ 
