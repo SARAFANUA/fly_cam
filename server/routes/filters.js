@@ -13,7 +13,7 @@ const NORMALIZATION_MAP = {
   // Статуси
   'прцює': 'Працює',
   'працює': 'Працює',
-  'тимчасово не працює': 'Тимчасово не працює', // Вирівнювання регістру
+  'тимчасово не працює': 'Тимчасово не працює',
   'виведена з ладу': 'Виведена з ладу',
   'відключена': 'Відключена',
   'знищена': 'Знищена',
@@ -23,43 +23,57 @@ const NORMALIZATION_MAP = {
 function normalizeValue(val) {
   if (!val) return val;
   const lower = String(val).toLowerCase().trim();
-  return NORMALIZATION_MAP[lower] || String(val).trim(); // Повертаємо виправлене або оригінал (почищений)
+  return NORMALIZATION_MAP[lower] || String(val).trim();
 }
 
 export default function filtersRoutes(db) {
   const router = express.Router();
 
   router.get('/', (req, res) => {
-    const { oblast, raion } = req.query;
+    // Отримуємо параметри регіонів
+    const { oblast, raion, hromada } = req.query;
 
     const result = {};
 
-    // 1. Прості поля (без змін логіки)
+    // 1. Прості поля (Регіони) - тут фільтрація не потрібна, це джерело для автокомпліту
     const simpleFields = ['oblast', 'raion', 'hromada'];
     for (const f of simpleFields) {
       try {
-        let sql = `SELECT DISTINCT ${f} as val FROM cameras WHERE ${f} IS NOT NULL AND TRIM(${f}) <> ''`;
-        const params = [];
-        if (f === 'raion' && oblast) { sql += ` AND oblast = ?`; params.push(oblast); }
-        if (f === 'hromada') {
-            if (raion) { sql += ` AND raion = ?`; params.push(raion); }
-            else if (oblast) { sql += ` AND oblast = ?`; params.push(oblast); }
-        }
-        sql += ` ORDER BY ${f}`;
-        result[f] = db.prepare(sql).all(...params).map(r => r.val);
+        // Тут ми навмисно не фільтруємо, щоб автокомпліт працював глобально
+        // (або можна фільтрувати, якщо хочете "залежні" регіони, але це вже робить клієнт)
+        let sql = `SELECT DISTINCT ${f} as val FROM cameras WHERE ${f} IS NOT NULL AND TRIM(${f}) <> '' ORDER BY ${f}`;
+        result[f] = db.prepare(sql).all().map(r => r.val);
       } catch (e) { result[f] = []; }
     }
 
-    // 2. Поля зі списком значень (split) - Ліцензії, Аналітика, Системи
+    // 2. Поля зі списком значень (Ліцензії, Аналітика, СИСТЕМИ)
+    // ТУТ ВПРОВАДЖУЄМО ФІЛЬТРАЦІЮ ПО РЕГІОНУ
     const splitFields = {
       'license_type': 'license_type',
       'analytics_object': 'analytics_object',
-      'integrated_systems': 'systems' // мапінг назви в БД -> назва в JSON
+      'integrated_systems': 'systems' 
     };
 
     for (const [dbField, jsonKey] of Object.entries(splitFields)) {
       try {
-        const rows = db.prepare(`SELECT DISTINCT ${dbField} as val FROM cameras WHERE ${dbField} IS NOT NULL`).all();
+        let sql = `SELECT DISTINCT ${dbField} as val FROM cameras WHERE ${dbField} IS NOT NULL`;
+        const params = [];
+
+        // Динамічно додаємо умови, якщо параметри передані
+        if (oblast) {
+            sql += ` AND oblast = ?`;
+            params.push(oblast);
+        }
+        if (raion) {
+            sql += ` AND raion = ?`;
+            params.push(raion);
+        }
+        if (hromada) {
+            sql += ` AND hromada = ?`;
+            params.push(hromada);
+        }
+
+        const rows = db.prepare(sql).all(...params);
         const uniqueSet = new Set();
         
         rows.forEach(r => {
@@ -67,11 +81,8 @@ export default function filtersRoutes(db) {
           const parts = String(r.val).split(/[,;\n]/); 
           parts.forEach(p => {
             let clean = p.trim();
-            // Прибираємо зайві пробіли всередині
             clean = clean.replace(/\s+/g, ' '); 
-            // Нормалізуємо першу літеру
             if (clean.length > 1) clean = clean.charAt(0).toUpperCase() + clean.slice(1);
-            
             if (clean.length > 2) uniqueSet.add(clean);
           });
         });
@@ -87,6 +98,8 @@ export default function filtersRoutes(db) {
 
     for (const [dbField, jsonKey] of Object.entries(normFields)) {
       try {
+        // Тут також можна додати фільтрацію, якщо хочете бачити тільки актуальні статуси для регіону
+        // Але поки залишимо глобально, щоб не плутати користувача
         const rows = db.prepare(`SELECT DISTINCT ${dbField} as val FROM cameras WHERE ${dbField} IS NOT NULL`).all();
         const uniqueSet = new Set();
         rows.forEach(r => {
@@ -100,10 +113,6 @@ export default function filtersRoutes(db) {
     res.json({ ok: true, filters: result });
   });
 
-  // ... (suggest та regions/search залишаються без змін) ...
-  // Скопіюйте сюди код для router.get('/suggest') та router.get('/regions/search') з попередньої версії
-  // Якщо потрібно, я можу надати повний файл, але ці частини не змінилися.
-  
   // 2. SUGGEST
   router.get('/suggest', (req, res) => {
     try {

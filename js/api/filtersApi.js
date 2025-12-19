@@ -13,6 +13,7 @@ function buildQuery(params = {}) {
 }
 
 export async function fetchFilters(params) {
+  // Тепер fetchFilters підтримує параметри (наприклад ?oblast=Kyiv)
   const res = await fetch(`/api/filters${buildQuery(params)}`);
   if (!res.ok) throw new Error(`filters http ${res.status}`);
   return await res.json();
@@ -25,7 +26,6 @@ export async function fetchCameraIdSuggest(camera_id_like, limit = 20) {
   return json.items || [];
 }
 
-// --- НОВЕ ---
 export async function searchRegion(type, query) {
     const res = await fetch(`/api/filters/regions/search${buildQuery({ type, query })}`);
     if (!res.ok) return [];
