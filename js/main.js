@@ -11,6 +11,7 @@ import { mapService } from './services/mapService.js';
 import { fileService } from './services/fileService.js';
 import { sidebarUI } from './ui/sidebarUI.js';
 import { initWarLayer } from './map/warLayer.js';
+import { initDynamicAdminBorders } from './map/mapLayers.js'; // ЗМІНЕНО
 
 import { renderPointsList } from './ui/pointsListUI.js';
 
@@ -263,6 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
     mapService.init(map);
     cameraRenderer.setMapInstance(map);
     initWarLayer(map);
+    initDynamicAdminBorders(map); // <--- Оновлений виклик
     initCameraPanel(map);
     initAnomalySettings();
 
