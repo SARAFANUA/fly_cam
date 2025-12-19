@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import Database from 'better-sqlite3';
 import { fileURLToPath } from 'node:url';
 import filtersRoutes from './routes/filters.js';
+import warRoutes from './routes/war.js';
 
 import camerasRoutes from './routes/cameras.js';
 import metaRoutes from './routes/meta.js';
@@ -58,6 +59,7 @@ app.use('/api/cameras', camerasRoutes(db));
 app.use('/api/meta', metaRoutes(db));
 app.use('/api/sync', syncRoutes(db));
 app.use('/api/filters', filtersRoutes(db));
+app.use('/api/war', warRoutes());
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 

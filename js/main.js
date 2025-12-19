@@ -10,14 +10,13 @@ import { getElements, showMessage } from './ui/dom.js';
 import { mapService } from './services/mapService.js';
 import { fileService } from './services/fileService.js';
 import { sidebarUI } from './ui/sidebarUI.js';
+import { initWarLayer } from './map/warLayer.js';
 
-// Деталі (і в сайдбарі, і в модалці)
 import { renderPointsList } from './ui/pointsListUI.js';
 
 let map;
 
-/** Panels (Ctrl multi-select) */
-const activePanels = new Set(); // ids: "panel-details", "panel-routes", "panel-dates", "panel-anomalies"
+const activePanels = new Set(); 
 
 function setSinglePanel(panelId) {
     activePanels.clear();
@@ -35,7 +34,6 @@ function syncPanelsUI() {
     const allPanels = Array.from(panelsRoot.querySelectorAll('.panel'));
     const allButtons = Array.from(document.querySelectorAll('.filter-btn[data-panel]'));
 
-    // show/hide
     allPanels.forEach(p => {
         const show = activePanels.has(p.id);
         p.classList.toggle('hidden', !show);
@@ -43,10 +41,8 @@ function syncPanelsUI() {
         p.style.maxHeight = '';
     });
 
-    // buttons state
     allButtons.forEach(b => b.classList.toggle('active', activePanels.has(b.dataset.panel)));
 
-    // sizing
     const visible = allPanels.filter(p => !p.classList.contains('hidden'));
     if (visible.length === 0) return;
 
@@ -66,7 +62,6 @@ function syncPanelsUI() {
 }
 
 function bindPanelsUI() {
-    // toolbar buttons
     document.querySelectorAll('.filter-btn[data-panel]').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const panelId = btn.dataset.panel;
@@ -81,7 +76,6 @@ function bindPanelsUI() {
         });
     });
 
-    // close buttons
     document.querySelectorAll('[data-close-panel]').forEach(btn => {
         btn.addEventListener('click', () => {
             const id = btn.getAttribute('data-close-panel');
@@ -91,20 +85,15 @@ function bindPanelsUI() {
         });
     });
 
-    // default panel
-    // if (activePanels.size === 0) activePanels.add('panel-details');
     syncPanelsUI();
-
     window.addEventListener('resize', () => syncPanelsUI());
 }
 
-/** Render / Update */
 async function updateApp() {
     await mapService.renderAll(store, handlePointMove);
 
     const ui = getElements();
 
-    // Routes
     sidebarUI.renderRoutes(ui.routeList, store, {
         onSelect: selectRoute,
         onLock: id => { const r = store.routes.get(id); if (r) { r.isLocked = !r.isLocked; updateApp(); } },
@@ -112,14 +101,11 @@ async function updateApp() {
         onRemove: removeRoute
     });
 
-    // Dates
     sidebarUI.renderDates(ui.uniqueDatesList, store, {
         onDateClick: handleDateFilter
     });
 
-    // Details in sidebar
     renderDetailsInSidebar();
-
     syncPanelsUI();
 }
 
@@ -130,10 +116,7 @@ async function handlePointMove(routeId, originalIndex, newLat, newLng) {
     if (route.normalizedPoints[originalIndex]) {
         route.normalizedPoints[originalIndex].latitude = newLat;
         route.normalizedPoints[originalIndex].longitude = newLng;
-
-        console.log(`Точку ${originalIndex + 1} оновлено. Перебудова геометрії...`);
         await mapService.refreshRouteGeometry(store, routeId, handlePointMove);
-
         renderDetailsInSidebar();
         syncPanelsUI();
     }
@@ -161,11 +144,8 @@ function renderDetailsInSidebar() {
         return;
     }
 
-    // ✅ FIX: routeTitle більше не null (інакше pointsListUI може падати)
     renderPointsList(route, store, {
-        routeTitle,
-        summary,
-        list
+        routeTitle, summary, list
     }, {
         onPointClick: (rid, idx) => markerRenderer.highlightSegment(rid, idx, store.vehicleType)
     });
@@ -181,7 +161,6 @@ function selectRoute(id) {
     if (store.globalDateFilter.size > 0) mapService.zoomToFiltered(route, store.globalDateFilter);
     else mapService.zoomToRoute(route);
 
-    // UX: після вибору маршруту — показуємо деталі (якщо користувач не в Ctrl-моді)
     if (activePanels.size === 1 && !activePanels.has('panel-details')) {
         setSinglePanel('panel-details');
         syncPanelsUI();
@@ -191,10 +170,8 @@ function selectRoute(id) {
 function removeRoute(id) {
     store.routes.delete(id);
     store.routeColorMap.delete(id);
-
     if (store.activeRouteId === id) store.activeRouteId = null;
     if (store.routes.size === 0) store.globalDateFilter.clear();
-
     updateApp();
 }
 
@@ -205,34 +182,34 @@ function handleDateFilter(date, event) {
         if (store.globalDateFilter.has(date) && store.globalDateFilter.size === 1) store.globalDateFilter.clear();
         else { store.globalDateFilter.clear(); store.globalDateFilter.add(date); }
     }
-
     updateApp();
-
     if (store.activeRouteId) {
         mapService.zoomToFiltered(store.routes.get(store.activeRouteId), store.globalDateFilter);
     }
-
     const msg = store.globalDateFilter.size > 0 ? `Фільтр: ${store.globalDateFilter.size} дат` : 'Фільтр скинуто';
     showMessage(msg, 'info', () => { store.globalDateFilter.clear(); updateApp(); });
 }
 
 /** DOM Ready */
 document.addEventListener('DOMContentLoaded', () => {
+    // 1. Ініціалізація карти (використовуємо глобальну змінну map)
     map = initializeMap();
     mapService.init(map);
     cameraRenderer.setMapInstance(map);
 
+    // 2. Ініціалізація шару війни (правильно передаємо map)
+    initWarLayer(map);
+
+    // 3. Ініціалізація панелі камер
     initCameraPanel(map);
 
     const ui = getElements();
 
-    // LEFT SIDEBAR TOGGLE
     ui.sidebarToggleBtn.onclick = () => {
         ui.sidebar.classList.toggle('collapsed');
         setTimeout(() => map.invalidateSize(), 300);
     };
 
-    // RIGHT SIDEBAR TOGGLE
     const toggleRightSidebar = () => {
         const isOpen = ui.sidebarRight.classList.contains('open');
         if (isOpen) {
@@ -247,22 +224,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (ui.sidebarRightToggleBtn) ui.sidebarRightToggleBtn.onclick = toggleRightSidebar;
     if (ui.closeCameraPanelBtn) ui.closeCameraPanelBtn.onclick = () => toggleRightSidebar();
 
-    // Clustering checkbox
     if (ui.toggleClustering) ui.toggleClustering.onchange = () => {
         store.isClusteringEnabled = ui.toggleClustering.checked;
         updateApp();
     };
 
-    // vehicle
     if (ui.vehicleSelect) ui.vehicleSelect.onchange = () => {
         store.vehicleType = ui.vehicleSelect.value;
         updateApp();
     };
 
-    // Panels UI
     bindPanelsUI();
 
-    // FILE PICKER
     if (ui.selectFilesBtn) ui.selectFilesBtn.onclick = () => ui.fileInput.click();
 
     ui.fileInput.onchange = async (e) => {
@@ -276,7 +249,6 @@ document.addEventListener('DOMContentLoaded', () => {
         e.target.value = '';
     };
 
-    // Drag & Drop
     const dropOverlay = document.getElementById('global-drop-overlay');
     let dragCounter = 0;
 
@@ -302,7 +274,6 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         dragCounter = 0;
         dropOverlay.classList.add('hidden');
-
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             for (const f of e.dataTransfer.files) {
                 await fileService.processFile(f, store, {
@@ -314,7 +285,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Аномалії
     const warnInput = document.getElementById('anomaly-warning-input');
     const dangerInput = document.getElementById('anomaly-danger-input');
 
@@ -336,14 +306,12 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // MODAL overlay (dim/transparent)
     const overlay = ui.modalOverlay;
     const toggleOverlayBtn = document.getElementById('toggle-overlay-btn');
 
     if (toggleOverlayBtn && overlay) {
         overlay.classList.add('transparent');
         toggleOverlayBtn.checked = false;
-
         toggleOverlayBtn.addEventListener('change', (e) => {
             if (e.target.checked) {
                 overlay.classList.remove('transparent');
@@ -353,13 +321,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 overlay.classList.add('transparent');
             }
         });
-
         overlay.addEventListener('click', () => {
             if (overlay.classList.contains('dimmed')) ui.closeModalBtn.click();
         });
     }
 
-    // OPEN DETAILS MODAL
     if (ui.openModalBtn) {
         ui.openModalBtn.onclick = () => {
             if (!store.activeRouteId) return;
@@ -390,7 +356,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     ui.closeModalBtn.onclick = () => ui.modalContainer.classList.add('hidden');
 
-    // Drag modal
     const modalContent = document.getElementById('modal-content');
     const modalHeader = document.getElementById('modal-header');
     const resizer = document.getElementById('resizer');
@@ -401,18 +366,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         modalHeader.onmousedown = (e) => {
             if (e.target.closest('button') || e.target.closest('.toggle-switch-small')) return;
-
             e.preventDefault();
             isDragging = true;
             startX = e.clientX;
             startY = e.clientY;
-
             const rect = modalContent.getBoundingClientRect();
             modalContent.style.transform = 'none';
             modalContent.style.left = rect.left + 'px';
             modalContent.style.top = rect.top + 'px';
             modalContent.style.margin = '0';
-
             startLeft = rect.left;
             startTop = rect.top;
 
@@ -432,7 +394,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Resize modal
     if (resizer && modalContent) {
         let isResizing = false;
         let startW, startH, startX, startY;
@@ -462,10 +423,9 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Cameras reload
     window.reloadCameras = async (filters, clusteringOverride = null) => {
         try {
-            const data = await fetchCameras({ ...filters, limit: 50000 });
+            const data = await fetchCameras({ ...filters, limit: 100000 });
             const items = data?.items || [];
 
             let isClustering;
